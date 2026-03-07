@@ -76,5 +76,5 @@ favicon = ""
 - Default css style and html template based on _[kew](https://github.com/uint23/kew)_ by [uint23](https://github.com/uint23)
 
 # Warning
->![WARNING]
+>[!WARNING]
 >Most of this was coded at night, while sleepy and a bit sick, and after walking for about 4 hours around a forest, so...
