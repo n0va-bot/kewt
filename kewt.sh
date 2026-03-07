@@ -160,7 +160,7 @@ ensure_root_defaults
 
 title="kewt"
 style="kewt"
-footer="made with <a href=\"https://git.krzak.org/N0VA/kewt\">kewt</a>"
+footer="made with <a href=\"https://kewt.krzak.org\">kewt</a>"
 dir_indexes="true"
 single_file_index="true"
 flatten="false"
