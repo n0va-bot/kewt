@@ -31,6 +31,7 @@ style = "kewt"
 dir_indexes = true
 single_file_index = true
 flatten = false
+order = ""
 footer = "made with <a href="https://kewt.krzak.org">kewt</a>"
 logo = ""
 display_logo = false
@@ -100,8 +101,8 @@ create_new_site() {
 }
 
 generate_nav() {
-    dinfo=$(find "$1" -not -path '*/.*' | sort -r | awk -v src="$1" -f "$awk_dir/collect_dir_info.awk")
-    find "$1" -name "*.md" | sort | awk -v src="$1" -v single_file_index="$single_file_index" -v flatten="$flatten" -v dinfo="$dinfo" -f "$awk_dir/generate_sidebar.awk"
+    dinfo=$(find "$1" -not -path '*/.*' | sort | awk -v src="$1" -f "$awk_dir/collect_dir_info.awk")
+    find "$1" -name "*.md" | sort | awk -v src="$1" -v single_file_index="$single_file_index" -v flatten="$flatten" -v order="$order" -v dinfo="$dinfo" -f "$awk_dir/generate_sidebar.awk"
 }
 
 src=""
@@ -165,6 +166,7 @@ footer="made with <a href=\"https://kewt.krzak.org\">kewt</a>"
 dir_indexes="true"
 single_file_index="true"
 flatten="false"
+order=""
 logo=""
 display_logo="false"
 display_title="true"
@@ -196,6 +198,7 @@ load_config() {
             dir_indexes) dir_indexes="$val" ;;
             single_file_index) single_file_index="$val" ;;
             flatten) flatten="$val" ;;
+            order) order="$val" ;;
             footer) footer="$val" ;;
             logo) logo="$val" ;;
             display_logo) display_logo="$val" ;;

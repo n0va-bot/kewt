@@ -38,6 +38,7 @@ style = "kewt"
 dir_indexes = true
 single_file_index = true
 flatten = false
+order = ""
 footer = "made with <a href="https://kewt.krzak.org">kewt</a>"
 logo = ""
 display_logo = false
@@ -51,6 +52,7 @@ favicon = ""
 - `dir_indexes` generate directory index pages when missing `index.md`
 - `single_file_index` if a directory has one markdown file and no `index.md`, use that file as `index.html`
 - `flatten` flatten sidebar directory levels
+- `order` comma separated file/directory name list to order the sidebar (alphabetical by default)
 - `footer` footer html/text shown at the bottom of pages
 - `logo` logo image path (used in header if enabled)
 - `display_logo` show logo in header

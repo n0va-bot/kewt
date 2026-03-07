@@ -12,6 +12,16 @@ BEGIN {
             d_dirs[dparts[1]] = dparts[3]
         }
     }
+
+    n_order = split(order, oparts, ",")
+    for (i = 1; i <= n_order; i++) {
+        name = oparts[i]
+        sub(/^[[:space:]]*/, "", name)
+        sub(/[[:space:]]*$/, "", name)
+        if (name != "") {
+            custom_order[tolower(name)] = i
+        }
+    }
 }
 
 {
@@ -29,8 +39,46 @@ BEGIN {
         has_index[dir] = 1
     }
 }
+function compare_paths(p1, p2,    parts1, parts2, n1, n2, i, name1, name2, lname1, lname2, w1, w2) {
+    n1 = split(p1, parts1, "/")
+    n2 = split(p2, parts2, "/")
+    for (i = 1; i <= n1 && i <= n2; i++) {
+        name1 = parts1[i]
+        name2 = parts2[i]
+        if (i == n1) gsub(/\.md$/, "", name1)
+        if (i == n2) gsub(/\.md$/, "", name2)
+        lname1 = tolower(name1)
+        lname2 = tolower(name2)
+
+        if (lname1 == "index" && i == n1 && lname2 != "index") return -1
+        if (lname2 == "index" && i == n2 && lname1 != "index") return 1
+
+        w1 = (lname1 in custom_order ? custom_order[lname1] : 999999)
+        w2 = (lname2 in custom_order ? custom_order[lname2] : 999999)
+
+        if (w1 < w2) return -1
+        if (w1 > w2) return 1
+
+        if (lname1 < lname2) return -1
+        if (lname1 > lname2) return 1
+    }
+    if (n1 < n2) return -1
+    if (n1 > n2) return 1
+    return 0
+}
 
 END {
+    for (i = 0; i < count - 1; i++) {
+        for (j = 0; j < count - i - 1; j++) {
+            if (compare_paths(ordered_paths[j], ordered_paths[j+1]) > 0) {
+                tmp = ordered_paths[j]
+                ordered_paths[j] = ordered_paths[j+1]
+                ordered_paths[j+1] = tmp
+            }
+        }
+    }
+
+
     print "<ul>"
     if ("index.md" in all_paths) {
         print "<li><a href=\"/index.html\">Home</a></li>"
