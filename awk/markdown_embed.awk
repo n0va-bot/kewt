@@ -498,6 +498,12 @@ function restore_plain_markers(line) {
     gsub(/\034P6\034/, ")", line)
     gsub(/\034P7\034/, "!", line)
     gsub(/\034P8\034/, "$", line)
+    gsub(/\034P9\034/, "#", line)
+    gsub(/\034P10\034/, "+", line)
+    gsub(/\034P11\034/, "-", line)
+    gsub(/\034P12\034/, "\\\\", line)
+    gsub(/\034P13\034/, "\\&lt;", line)
+    gsub(/\034P14\034/, "\\&gt;", line)
     gsub(/<mfmplain>/, "<span class=\"mfm-plain\">", line)
     gsub(/<\/mfmplain>/, "</span>", line)
     return line

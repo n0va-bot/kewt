@@ -44,7 +44,96 @@ sed_inplace() {
 temp_file="/tmp/markdown.$$"
 cat "$@" > "$temp_file"
 
+# backslash escapes for literal characters and inline code masking
 awk '
+function mask(s,    t) {
+    t = s
+    gsub(/\*/, "\034P0\034", t)
+    gsub(/_/, "\034P1\034", t)
+    gsub(/`/, "\034P2\034", t)
+    gsub(/\[/, "\034P3\034", t)
+    gsub(/\]/, "\034P4\034", t)
+    gsub(/\(/, "\034P5\034", t)
+    gsub(/\)/, "\034P6\034", t)
+    gsub(/!/, "\034P7\034", t)
+    gsub(/\$/, "\034P8\034", t)
+    gsub(/#/, "\034P9\034", t)
+    gsub(/\+/, "\034P10\034", t)
+    gsub(/-/, "\034P11\034", t)
+    gsub(/\\/, "\034P12\034", t)
+    gsub(/</, "\034P13\034", t)
+    gsub(/>/, "\034P14\034", t)
+    return t
+}
+{
+    # backslash escapes
+    gsub(/\\\*/, "\034P0\034")
+    gsub(/\\_/, "\034P1\034")
+    gsub(/\\`/, "\034P2\034")
+    gsub(/\\\[/, "\034P3\034")
+    gsub(/\\\]/, "\034P4\034")
+    gsub(/\\\(/, "\034P5\034")
+    gsub(/\\\)/, "\034P6\034")
+    gsub(/\\!/, "\034P7\034")
+    gsub(/\\\$/, "\034P8\034")
+    gsub(/\\#/, "\034P9\034")
+    gsub(/\\\+/, "\034P10\034")
+    gsub(/\\\-/, "\034P11\034")
+    gsub(/\\\\/, "\034P12\034")
+    gsub(/\\</, "\034P13\034")
+    gsub(/\\>/, "\034P14\034")
+
+    # inline code (1 or 2 backticks)
+    line = $0
+    if (line ~ /^```/) {
+        print line
+        next
+    }
+    out = ""
+    p = 1
+    while (match(substr(line, p), /`+/)) {
+        pstart = p + RSTART - 1
+        plen = RLENGTH
+        if (plen >= 3) {
+            out = out substr(line, p, pstart - p + plen)
+            p = pstart + plen
+            continue
+        }
+
+        # Found 1 or 2 backticks at pstart
+        # Search for closing marker
+        marker = substr(line, pstart, plen)
+        tail = substr(line, pstart + plen)
+        mpos = index(tail, marker)
+        if (mpos > 0) {
+            # Check if it is followed by more backticks
+            if (substr(tail, mpos + plen, 1) == "`") {
+                # Not a match, treat as literal
+                out = out substr(line, p, pstart - p + plen)
+                p = pstart + plen
+                continue
+            }
+            
+            # Found match!
+            content = substr(tail, 1, mpos - 1)
+            out = out substr(line, p, pstart - p)
+            if (plen == 2 && substr(content, 1, 1) == " " && substr(content, length(content), 1) == " ") {
+                content = substr(content, 2, length(content) - 2)
+            }
+            out = out "<code>" mask(content) "</code>"
+            p = pstart + plen + mpos + plen - 1
+        } else {
+            # No closing marker, treat as literal
+            out = out substr(line, p, pstart - p + plen)
+            p = pstart + plen
+        }
+    }
+    out = out substr(line, p)
+    print out
+}' "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
+
+awk '
+
 function find_unescaped_tag(s, tag,    p, off, pos) {
     p = 1
     while (1) {
@@ -329,11 +418,12 @@ sed_ere_inplace '/^[1-9]+\\. /s/([1-9]+)\\. /\1\. /' "$temp_file"
 
 # fenced code blocks (triple backticks)
 awk '
-BEGIN { in_fence = 0 }
+BEGIN { in_fence = 0; first_line = 0 }
 {
     if (!in_fence && $0 ~ /^```/) {
-        print "<pre><code>"
+        printf "<pre><code>"
         in_fence = 1
+        first_line = 1
         next
     }
     if (in_fence && $0 ~ /^```[[:space:]]*$/) {
@@ -341,7 +431,15 @@ BEGIN { in_fence = 0 }
         in_fence = 0
         next
     }
-    print
+    if (in_fence) {
+        if (first_line) {
+            first_line = 0
+            if ($0 == "") next
+        }
+        print
+    } else {
+        print
+    }
 }
 END {
     if (in_fence) print "</code></pre>"
@@ -565,11 +663,11 @@ b
 
 :emphasis
 x
-s/\*\*(.+)\*\*/<strong>\1<\/strong>/g
-s/__([^_]+)__/<strong>\1<\/strong>/g
-s/\*([^\*]+)\*/<em>\1<\/em>/g
-s/([^\\])_([^_]+)_/\1<em>\2<\/em>/g
-s/\~\~(.+)\~\~/<strike>\1<\/strike>/g
+s/\*\*([^\n]+)\*\*/<strong>\1<\/strong>/g
+s/__([^_\n]+)__/<strong>\1<\/strong>/g
+s/\*([^\*\n]+)\*/<em>\1<\/em>/g
+s/([^\\])_([^_\n]+)_/\1<em>\2<\/em>/g
+s/\~\~([^\n]+)\~\~/<strike>\1<\/strike>/g
 p
 ' "$temp_file"
 
@@ -631,10 +729,6 @@ sed_ere_inplace '
 s/<(http[s]?:\/\/.*)>/<a href=\"\1\">\1<\/a>/g # automatic links
 s/<(.*@.*\..*)>/<a href=\"mailto:\1\">\1<\/a>/g # automatic email address links
 
-# inline code
-s/([^\\])``+ *([^ ]*) *``+/\1<code>\2<\/code>/g
-s/([^\\])`([^`]*)`/\1<code>\2<\/code>/g
-
 # force-inline image syntax (double bang)
 s/!!\[([^]]*)\]\(([^)]*) \"([^\"]*)\"\)/<img data-force-inline=\"1\" alt=\"\1\" src=\"\2\" title=\"\3\" \/>/g
 s/!!\[([^]]*)\]\(([^)]*)\)/<img data-force-inline=\"1\" alt=\"\1\" src=\"\2\" \/>/g
@@ -653,18 +747,6 @@ s/\$\[font\.sans ([^]]+)\]/<span style=\"font-family: sans-serif;\">\1<\/span>/g
 # special characters
 /&.+;/!s/&/\&amp;/g # ampersand
 /<[\/a-zA-Z]/!s/</\&lt;/g# less than bracket
-
-# backslash escapes for literal characters
-s/\\\*/\*/g # asterisk
-s/\\_/_/g # underscore
-s/\\`/`/g # underscore
-s/\\!/!/g # exclamation
-s/\\#/#/g # pound or hash
-s/\\\+/\+/g # plus
-s/\\\-/\-/g # minus
-s/\\</\&lt;/g # less than bracket
-s/\\>/\&gt;/g # greater than bracket
-s/\\\\/\\/g # backslash
 ' "$temp_file"
 
 # display and cleanup
