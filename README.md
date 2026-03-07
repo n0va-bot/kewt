@@ -19,6 +19,55 @@ It's meant to be a static site generator, like _[kew](https://github.com/uint23/
 
 If you want to **force** a file to be inlined, use `\!![]` instead of `\![]`
 
+## Usage
+
+```sh
+./kewt.sh --help
+./kewt.sh --new [title]
+./kewt.sh --from <src> --to <out>
+./kewt.sh [src] [out]
+```
+
+`--new [title]` creates a new site directory with a copied `site.conf` and a default `index.md`.
+
+## site.conf
+
+```conf
+title = "kewt"
+style = "kewt"
+dir_indexes = true
+single_file_index = true
+flatten = false
+footer = "made with <a href="https://kewt.krzak.org">kewt</a>"
+logo = ""
+display_logo = false
+display_title = true
+logo_as_favicon = true
+favicon = ""
+```
+
+- `title` site title
+- `style` style file name from `./styles` (without `.css`)
+- `dir_indexes` generate directory index pages when missing `index.md`
+- `single_file_index` if a directory has one markdown file and no `index.md`, use that file as `index.html`
+- `flatten` flatten sidebar directory levels
+- `footer` footer html/text shown at the bottom of pages
+- `logo` logo image path (used in header if enabled)
+- `display_logo` show logo in header
+- `display_title` show title text in header
+- `logo_as_favicon` use `logo` as favicon
+- `favicon` explicit favicon path (used when `logo_as_favicon` is false or no logo is set)
+
+## Embeds
+
+- `\![link]`:
+  - local image/audio/video files are embedded as media tags
+  - local text/code files are inlined directly
+  - global image/audio/video links are embedded as media tags
+  - other global links are embedded as `<iframe>`
+- `\![alt](link)` works the same, with `alt` used for images
+- `\!![]` and `\!![alt](link)` force inline local file contents
+
 ## Credits
 
 - Markdown to html conversion based on [markdown.bash](https://github.com/chadbraunduin/markdown.bash) by [chadbraunduin](https://github.com/chadbraunduin)
