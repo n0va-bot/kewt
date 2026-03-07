@@ -1,0 +1,56 @@
+body {
+    font-family: sans;
+    margin: 0;
+    padding: 0;
+}
+
+header {
+    width: 100%;
+    clear: both;
+}
+
+article {
+    margin-left: 18em;
+    padding-left: 1em;
+}
+
+footer {
+    clear: both;
+    width: 100%;
+}
+
+header nav {
+    overflow: hidden;
+}
+
+nav a,
+header a {
+    text-decoration: none;
+    color: inherit;
+}
+
+header h1 span {
+    margin-left: 1em;
+    font-size: 50%;
+    font-style: italic;
+}
+
+body > nav {
+    float: left;
+    width: 16em;
+    padding-right: 1vw;
+}
+
+nav ul {
+    list-style-type: none;
+    list-style-position: outside;
+    padding-left: 8px;
+}
+
+nav li ul {
+    padding-left: 0.6em;
+}
+
+footer {
+    overflow: hidden;
+}

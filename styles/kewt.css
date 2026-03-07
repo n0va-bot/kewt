@@ -1,0 +1,186 @@
+:root {
+    --bg: #646c7f;
+    --fg: #fffde0;
+    --fg-link: #fff18f;
+    --code-bg: #32394a;
+    --code-border: #8f95a4;
+    --code-fg: #fffde0;
+    --code-sel: #fff18f;
+    --code-prop: #ffd27f;
+    --code-val: #cde7ff;
+    --code-var: #b9ffbe;
+    --code-com: #d0d0d0;
+    --adm-note-bg: #3f5666;
+    --adm-note-border: #a8d8ff;
+    --adm-tip-bg: #3f664c;
+    --adm-tip-border: #b9ffbe;
+    --adm-important-bg: #5a4a6c;
+    --adm-important-border: #e4c7ff;
+    --adm-warning-bg: #6b5539;
+    --adm-warning-border: #ffe0a8;
+    --adm-caution-bg: #6f3f3f;
+    --adm-caution-border: #ffb4b4;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: serif;
+    font-size: 16px;
+    line-height: 1.2;
+}
+
+header {
+    padding: 20px;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 35px;
+    font-weight: normal;
+    font-style: italic;
+}
+
+header a {
+    color: var(--fg);
+    text-decoration: none;
+}
+
+#side-bar {
+    position: absolute;
+    top: 80px;
+    left: 0;
+    width: 200px;
+    padding-left: 20px;
+}
+
+.side-title {
+    font-size: 25px;
+    margin: 20px 0 8px 0;
+    color: var(--fg);
+}
+
+#side-bar ul {
+    margin: 0 0 0 20px;
+    padding: 0px;
+    list-style: none;
+}
+
+#side-bar li {
+    margin: 6px 0;
+}
+
+a {
+    color: var(--fg-link);
+    text-decoration: none;
+    padding: 1px 2px;
+}
+
+a:hover {
+    background: var(--fg);
+    color: var(--bg);
+}
+
+article {
+    margin: 80px 0 0 0;
+    max-width: 800px;
+}
+
+h3 {
+    margin-top: 30px;
+    font-size: 25px;
+    color: var(--fg);
+    font-weight: normal;
+}
+
+pre {
+    background: var(--code-bg);
+    color: var(--code-fg);
+    border: 1px solid var(--code-border);
+    margin: 20px 0;
+    padding: 12px;
+    overflow: auto;
+}
+
+code {
+    font-family: monospace;
+}
+
+.tok-sel {
+    color: var(--code-sel);
+}
+
+.tok-prop {
+    color: var(--code-prop);
+}
+
+.tok-val {
+    color: var(--code-val);
+}
+
+.tok-var {
+    color: var(--code-var);
+}
+
+.tok-com {
+    color: var(--code-com);
+}
+
+.tok-punc {
+    color: var(--code-fg);
+}
+
+.admonition {
+    margin: 18px 0;
+    padding: 10px 12px;
+    border: 1px solid var(--fg);
+    border-left-width: 5px;
+}
+
+.admonition-title {
+    margin: 0 0 8px 0;
+    font-weight: bold;
+}
+
+.admonition p {
+    margin: 0;
+}
+
+.admonition-note {
+    background: var(--adm-note-bg);
+    border-color: var(--adm-note-border);
+}
+
+.admonition-tip {
+    background: var(--adm-tip-bg);
+    border-color: var(--adm-tip-border);
+}
+
+.admonition-important {
+    background: var(--adm-important-bg);
+    border-color: var(--adm-important-border);
+}
+
+.admonition-warning {
+    background: var(--adm-warning-bg);
+    border-color: var(--adm-warning-border);
+}
+
+.admonition-caution {
+    background: var(--adm-caution-bg);
+    border-color: var(--adm-caution-border);
+}
+
+footer {
+    padding-top: 80px;
+    font-style: italic;
+    font-size: 17px;
+}
+
+article,
+footer {
+    margin-left: 240px;
+    margin-top: 0px;
+}
