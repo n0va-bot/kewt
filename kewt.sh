@@ -82,18 +82,7 @@ create_new_site() {
     printf "# _kewt_ website\n" > "$new_dir/index.md"
 
     if [ -n "$new_title" ]; then
-        awk -v new_title="$new_title" '
-            BEGIN { done = 0 }
-            /^title[[:space:]]*=/ {
-                print "title = \"" new_title "\""
-                done = 1
-                next
-            }
-            { print }
-            END {
-                if (!done) print "title = \"" new_title "\""
-            }
-        ' "$new_dir/site.conf" > "$new_dir/site.conf.tmp" && mv "$new_dir/site.conf.tmp" "$new_dir/site.conf"
+        awk -v new_title="$new_title" -f "$awk_dir/update_site_conf.awk" "$new_dir/site.conf" > "$new_dir/site.conf.tmp" && mv "$new_dir/site.conf.tmp" "$new_dir/site.conf"
     fi
 
     echo "Created new site at '$new_dir'."
@@ -101,7 +90,7 @@ create_new_site() {
 }
 
 generate_nav() {
-    dinfo=$(find "$1" -not -path '*/.*' | sort | awk -v src="$1" -f "$awk_dir/collect_dir_info.awk")
+    dinfo=$(find "$1" ! -path '*/.*' | sort | awk -v src="$1" -f "$awk_dir/collect_dir_info.awk")
     find "$1" -name "*.md" | sort | awk -v src="$1" -v single_file_index="$single_file_index" -v flatten="$flatten" -v order="$order" -v dinfo="$dinfo" -f "$awk_dir/generate_sidebar.awk"
 }
 
@@ -314,9 +303,9 @@ find "$src" -type d | sort | while read -r dir; do
 
     if [ ! -f "$dir/index.md" ]; then
         if [ "$single_file_index" = "true" ]; then
-            md_count=$(find "$dir" -maxdepth 1 -name "*.md" | wc -l)
+            md_count=$(find "$dir" ! -name "$(basename "$dir")" -prune -name "*.md" | wc -l)
             if [ "$md_count" -eq 1 ]; then
-                md_file=$(find "$dir" -maxdepth 1 -name "*.md")
+                md_file=$(find "$dir" ! -name "$(basename "$dir")" -prune -name "*.md")
                 render_markdown "$md_file" > "$out_dir/index.html"
                 continue
             fi
@@ -327,7 +316,7 @@ find "$src" -type d | sort | while read -r dir; do
         [ -z "$display_dir" ] && display_dir="/"
         echo "# Index of $display_dir" > "$temp_index"
         echo "" >> "$temp_index"
-        find "$dir" -maxdepth 1 -not -path '*/.*' -not -path "$dir" | sort | while read -r entry; do
+        find "$dir" ! -name "$(basename "$dir")" -prune ! -path '*/.*' | sort | while read -r entry; do
             name="${entry##*/}"
             case "$name" in
                 template.html|site.conf|style.css|index.md) continue ;;
@@ -359,7 +348,7 @@ find "$src" -type f | sort | while IFS= read -r file; do
     esac
 
     if [ "$single_file_index" = "true" ] && [ "${file%.md}" != "$file" ] && [ ! -f "$(dirname "$file")/index.md" ]; then
-        md_count=$(find "$(dirname "$file")" -maxdepth 1 -name "*.md" | wc -l)
+        md_count=$(find "$(dirname "$file")" ! -name "$(basename "$(dirname "$file")")" -prune -name "*.md" | wc -l)
         [ "$md_count" -eq 1 ] && continue
     fi
 

@@ -1,0 +1,173 @@
+BEGIN {
+    in_pre = 0
+}
+
+{
+    if ($0 ~ /<pre>/) {
+        in_pre = 1
+    }
+    
+    if (in_pre) {
+        print
+        if ($0 ~ /<\/pre>/) {
+            in_pre = 0
+        }
+        next
+    }
+
+    line = $0
+
+    # automatic links
+    while (match(line, /<https?:\/\/[^>]+>/)) {
+        start = RSTART; len = RLENGTH
+        url = substr(line, start + 1, len - 2)
+        repl = "<a href=\"" url "\">" url "</a>"
+        line = substr(line, 1, start - 1) repl substr(line, start + len)
+    }
+
+    # automatic email address links
+    while (match(line, /<[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}>/)) {
+        start = RSTART; len = RLENGTH
+        email = substr(line, start + 1, len - 2)
+        repl = "<a href=\"mailto:" email "\">" email "</a>"
+        line = substr(line, 1, start - 1) repl substr(line, start + len)
+    }
+
+    # force-inline image syntax (double bang)
+    while (match(line, /!!\[[^\]]*\]\([^\)]+ "[^"]*"\)/)) {
+        start = RSTART; len = RLENGTH
+        token = substr(line, start, len)
+        match(token, /\[[^\]]*\]/); alt = substr(token, RSTART + 1, RLENGTH - 2)
+        match(token, /"[^"]*"/); title = substr(token, RSTART + 1, RLENGTH - 2)
+        match(token, /\([^\)]+/); inner = substr(token, RSTART + 1, RLENGTH - 1)
+        sub(/[[:space:]]*"[^"]*"/, "", inner); src = inner
+        repl = "<img data-force-inline=\"1\" alt=\"" alt "\" src=\"" src "\" title=\"" title "\" />"
+        line = substr(line, 1, start - 1) repl substr(line, start + len)
+    }
+    while (match(line, /!!\[[^\]]*\]\([^\)]+\)/)) {
+        start = RSTART; len = RLENGTH
+        token = substr(line, start, len)
+        match(token, /\[[^\]]*\]/); alt = substr(token, RSTART + 1, RLENGTH - 2)
+        match(token, /\([^\)]+/); src = substr(token, RSTART + 1, RLENGTH - 1)
+        repl = "<img data-force-inline=\"1\" alt=\"" alt "\" src=\"" src "\" />"
+        line = substr(line, 1, start - 1) repl substr(line, start + len)
+    }
+
+    # inline image
+    while (match(line, /!\[[^\]]*\]\([^\)]+ "[^"]*"\)/)) {
+        start = RSTART; len = RLENGTH
+        if (start > 1 && substr(line, start - 1, 1) == "\\") break
+        token = substr(line, start, len)
+        match(token, /\[[^\]]*\]/); alt = substr(token, RSTART + 1, RLENGTH - 2)
+        match(token, /"[^"]*"/); title = substr(token, RSTART + 1, RLENGTH - 2)
+        match(token, /\([^\)]+/); inner = substr(token, RSTART + 1, RLENGTH - 1)
+        sub(/[[:space:]]*"[^"]*"/, "", inner); src = inner
+        repl = "<img alt=\"" alt "\" src=\"" src "\" title=\"" title "\" />"
+        line = substr(line, 1, start - 1) repl substr(line, start + len)
+    }
+    while (match(line, /!\[[^\]]*\]\([^\)]+\)/)) {
+        start = RSTART; len = RLENGTH
+        if (start > 1 && substr(line, start - 1, 1) == "\\") break
+        token = substr(line, start, len)
+        match(token, /\[[^\]]*\]/); alt = substr(token, RSTART + 1, RLENGTH - 2)
+        match(token, /\([^\)]+/); src = substr(token, RSTART + 1, RLENGTH - 1)
+        repl = "<img alt=\"" alt "\" src=\"" src "\" />"
+        line = substr(line, 1, start - 1) repl substr(line, start + len)
+    }
+
+    # inline link
+    while (match(line, /\[[^\]]*\]\([^\)]+ "[^"]*"\)/)) {
+        start = RSTART; len = RLENGTH
+        if (start > 1 && (substr(line, start - 1, 1) == "\\" || substr(line, start - 1, 1) == "!")) break
+        token = substr(line, start, len)
+        match(token, /\[[^\]]*\]/); text = substr(token, RSTART + 1, RLENGTH - 2)
+        match(token, /"[^"]*"/); title = substr(token, RSTART + 1, RLENGTH - 2)
+        match(token, /\([^\)]+/); inner = substr(token, RSTART + 1, RLENGTH - 1)
+        sub(/[[:space:]]*"[^"]*"/, "", inner); href = inner
+        repl = "<a href=\"" href "\" title=\"" title "\">" text "</a>"
+        line = substr(line, 1, start - 1) repl substr(line, start + len)
+    }
+    while (match(line, /\[[^\]]*\]\([^\)]+\)/)) {
+        start = RSTART; len = RLENGTH
+        if (start > 1 && (substr(line, start - 1, 1) == "\\" || substr(line, start - 1, 1) == "!")) break
+        token = substr(line, start, len)
+        match(token, /\[[^\]]*\]/); text = substr(token, RSTART + 1, RLENGTH - 2)
+        match(token, /\([^\)]+/); href = substr(token, RSTART + 1, RLENGTH - 1)
+        repl = "<a href=\"" href "\">" text "</a>"
+        line = substr(line, 1, start - 1) repl substr(line, start + len)
+    }
+
+    # MFM font syntax
+    while (match(line, /\$\[font\.serif [^\]]+\]/)) {
+        start = RSTART; len = RLENGTH
+        content = substr(line, start + 13, len - 14)
+        line = substr(line, 1, start - 1) "<span style=\"font-family: serif;\">" content "</span>" substr(line, start + len)
+    }
+    while (match(line, /\$\[font\.monospace [^\]]+\]/)) {
+        start = RSTART; len = RLENGTH
+        content = substr(line, start + 17, len - 18)
+        line = substr(line, 1, start - 1) "<span style=\"font-family: monospace;\">" content "</span>" substr(line, start + len)
+    }
+    while (match(line, /\$\[font\.sans [^\]]+\]/)) {
+        start = RSTART; len = RLENGTH
+        content = substr(line, start + 12, len - 13)
+        line = substr(line, 1, start - 1) "<span style=\"font-family: sans-serif;\">" content "</span>" substr(line, start + len)
+    }
+
+    # Bold, Italic, Strikethrough (BRE-like logic in AWK)
+    # Strong Bold **
+    while (match(line, /\*\*[^*]+\*\*/)) {
+        start = RSTART; len = RLENGTH
+        content = substr(line, start + 2, len - 4)
+        repl = "<strong>" content "</strong>"
+        line = substr(line, 1, start - 1) repl substr(line, start + len)
+    }
+    # Strong Bold __
+    while (match(line, /__[^_]+__/)) {
+        start = RSTART; len = RLENGTH
+        content = substr(line, start + 2, len - 4)
+        repl = "<strong>" content "</strong>"
+        line = substr(line, 1, start - 1) repl substr(line, start + len)
+    }
+    # Italic *
+    while (match(line, /\*[^*]+\*/)) {
+        start = RSTART; len = RLENGTH
+        content = substr(line, start + 1, len - 2)
+        repl = "<em>" content "</em>"
+        line = substr(line, 1, start - 1) repl substr(line, start + len)
+    }
+    # Italic _
+    while (match(line, /_[^_]+_/)) {
+        start = RSTART; len = RLENGTH
+        if (start > 1 && substr(line, start - 1, 1) == "\\") break
+        content = substr(line, start + 1, len - 2)
+        repl = "<em>" content "</em>"
+        line = substr(line, 1, start - 1) repl substr(line, start + len)
+    }
+    # Strikethrough ~~
+    while (match(line, /~~[^~]+~~/)) {
+        start = RSTART; len = RLENGTH
+        content = substr(line, start + 2, len - 4)
+        repl = "<strike>" content "</strike>"
+        line = substr(line, 1, start - 1) repl substr(line, start + len)
+    }
+
+    # special characters
+    if (line !~ /&[A-Za-z0-9#]+;/) {
+        gsub(/&/, "&amp;", line)
+    }
+    
+    p = 1
+    while (match(substr(line, p), /</)) {
+        start = p + RSTART - 1
+        next_char = substr(line, start + 1, 1)
+        if (next_char !~ /^[\/A-Za-z]/) {
+            line = substr(line, 1, start - 1) "&lt;" substr(line, start + 1)
+            p = start + 4
+        } else {
+            p = start + 1
+        }
+    }
+
+    print line
+}
