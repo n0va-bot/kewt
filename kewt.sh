@@ -31,7 +31,7 @@ style = "kewt"
 dir_indexes = true
 single_file_index = true
 flatten = false
-footer = "made with <a href="https://git.krzak.org/N0VA/kewt">kewt</a>"
+footer = "made with <a href="https://kewt.krzak.org">kewt</a>"
 logo = ""
 display_logo = false
 display_title = true
@@ -60,6 +60,7 @@ EOF
         <nav id="side-bar">{{NAV}}</nav>
 
         <article>{{CONTENT}}</article>
+        <footer>{{FOOTER}}</footer>
     </body>
 </html>
 EOF
@@ -172,10 +173,25 @@ favicon=""
 
 load_config() {
     [ -f "$1" ] || return
-    while IFS='= ' read -r key val; do
-        val=$(echo "$val" | tr -d '" ' | tr -d "'")
+    while IFS= read -r line; do
+        case "$line" in
+            ''|'#'*) continue ;;
+            *=*) ;;
+            *) continue ;;
+        esac
+
+        key=${line%%=*}
+        val=${line#*=}
+
+        key=$(printf '%s' "$key" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+        val=$(printf '%s' "$val" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+        case "$val" in
+            \"*\") val=${val#\"}; val=${val%\"} ;;
+            \'*\') val=${val#\'}; val=${val%\'} ;;
+        esac
+
         case "$key" in
-            title) ;;
+            title) title="$val" ;;
             style) style="$val" ;;
             dir_indexes) dir_indexes="$val" ;;
             single_file_index) single_file_index="$val" ;;
@@ -188,9 +204,6 @@ load_config() {
             favicon) favicon="$val" ;;
         esac
     done < "$1"
-
-    t=$(grep "^title" "$1" | cut -d= -f2- | sed 's/^[ "]*//;s/[ "]*$//')
-    [ -n "$t" ] && title="$t"
 }
 
 load_config "./site.conf"
