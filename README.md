@@ -1,4 +1,5 @@
 # _kewt_
+### Pronounced "cute"
 
 # [Go to the website](https://kewt.krzak.org)
 

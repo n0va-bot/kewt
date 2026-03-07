@@ -1,4 +1,7 @@
 # _kewt_
+### Pronounced "cute"
+
+# [Go to the repo](https://git.krzak.org/N0VA/kewt)
 
 _kewt_ is a minimalist ssg inspired by _[werc](http://werc.cat-v.org/)_ and _[kew](https://github.com/uint23/kew)_
 
