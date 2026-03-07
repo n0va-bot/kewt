@@ -11,6 +11,7 @@ BEGIN { in_fence = 0; first_line = 0 }
         next
     }
     if (in_fence) {
+        gsub(/&/, "\\&amp;"); gsub(/</, "\\&lt;"); gsub(/>/, "\\&gt;")
         if (first_line) {
             first_line = 0
             if ($0 == "") next

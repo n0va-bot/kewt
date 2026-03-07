@@ -90,8 +90,8 @@ create_new_site() {
 }
 
 generate_nav() {
-    dinfo=$(find "$1" ! -path '*/.*' | sort | awk -v src="$1" -f "$awk_dir/collect_dir_info.awk")
-    find "$1" -name "*.md" | sort | awk -v src="$1" -v single_file_index="$single_file_index" -v flatten="$flatten" -v order="$order" -v dinfo="$dinfo" -f "$awk_dir/generate_sidebar.awk"
+    dinfo=$(find "$1" \( -name ".*" ! -name "." ! -name ".." -prune \) -o -print | sort | awk -v src="$1" -f "$awk_dir/collect_dir_info.awk")
+    find "$1" \( -name ".*" ! -name "." ! -name ".." -prune \) -o -name "*.md" -print | sort | awk -v src="$1" -v single_file_index="$single_file_index" -v flatten="$flatten" -v order="$order" -v dinfo="$dinfo" -f "$awk_dir/generate_sidebar.awk"
 }
 
 src=""
@@ -287,7 +287,7 @@ render_markdown() {
 
 echo "Building site from '$src' to '$out'..."
 
-find "$src" -type d | sort | while read -r dir; do
+find "$src" \( -name ".*" ! -name "." ! -name ".." -prune \) -o -type d -print | sort | while read -r dir; do
     rel_dir="${dir#$src/}"
     [ "$dir" = "$src" ] && rel_dir="."
     out_dir="$out/$rel_dir"
@@ -316,7 +316,7 @@ find "$src" -type d | sort | while read -r dir; do
         [ -z "$display_dir" ] && display_dir="/"
         echo "# Index of $display_dir" > "$temp_index"
         echo "" >> "$temp_index"
-        find "$dir" ! -name "$(basename "$dir")" -prune ! -path '*/.*' | sort | while read -r entry; do
+        find "$dir" ! -name "$(basename "$dir")" -prune ! -name ".*" -print | sort | while read -r entry; do
             name="${entry##*/}"
             case "$name" in
                 template.html|site.conf|style.css|index.md) continue ;;
@@ -338,7 +338,7 @@ if [ ! -f "$out/styles.css" ] && [ -f "styles/$style.css" ]; then
     copy_style_with_resolved_vars "styles/$style.css" "$out/styles.css"
 fi
 
-find "$src" -type f | sort | while IFS= read -r file; do
+find "$src" \( -name ".*" ! -name "." ! -name ".." -prune \) -o -type f -print | sort | while IFS= read -r file; do
     rel_path="${file#$src/}"
     dir_rel=$(dirname "$rel_path")
     out_dir="$out/$dir_rel"
