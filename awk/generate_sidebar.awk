@@ -80,8 +80,9 @@ END {
     }
 
     print "<ul>"
-    if ("index.md" in all_paths) {
-        print "<li><a href=\"/index.html\">Home</a></li>"
+    if (show_home_in_nav == "true" && "index.md" in all_paths) {
+        if (home_name == "") home_name = "Home"
+        print "<li><a href=\"/index.html\">" home_name "</a></li>"
     }
 
     depth = 0

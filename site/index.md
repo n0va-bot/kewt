@@ -39,6 +39,8 @@ dir_indexes = true
 single_file_index = true
 flatten = false
 order = ""
+home_name = "Home"
+show_home_in_nav = true
 footer = "made with <a href="https://kewt.krzak.org">kewt</a>"
 logo = ""
 display_logo = false
@@ -53,12 +55,20 @@ favicon = ""
 - `single_file_index` if a directory has one markdown file and no `index.md`, use that file as `index.html`
 - `flatten` flatten sidebar directory levels
 - `order` comma separated file/directory name list to order the sidebar (alphabetical by default)
+- `home_name` text for the home link in navigation (default: "Home")
+- `show_home_in_nav` show home link in navigation (default: true)
 - `footer` footer html/text shown at the bottom of pages
 - `logo` logo image path (used in header if enabled)
 - `display_logo` show logo in header
 - `display_title` show title text in header
 - `logo_as_favicon` use `logo` as favicon
 - `favicon` explicit favicon path (used when `logo_as_favicon` is false or no logo is set)
+
+## Ignores
+
+- `.kewtignore`: Files/directories to ignore. If empty, the whole directory gets ignored
+- `.kewthide`: Files/directories to hide from navigation but still process. Same empty rules as with ignore
+- `.kewtpreserve`: Files/directories to copy but not convert markdown to html. Same empty rules again
 
 ## Embeds
 

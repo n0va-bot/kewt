@@ -13,15 +13,17 @@ sed_inplace() {
     }
 }
 
-temp_file="/tmp/markdown.$$"
+temp_file="/tmp/markdown.$$.md"
 cat "$@" > "$temp_file"
+
+trap 'rm -f "$temp_file" "$temp_file.tmp"' EXIT INT TERM
 
 # Mask
 awk -f "$awk_dir/mask_inline_code.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
 awk -f "$awk_dir/mask_plain.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
 
 # Reference links
-refs=$(cat "$@" | awk '/^\[[^\]]+\]: +/')
+refs=$(cat "$@" | awk '/^\[[^\]]+\]:  */')
 IFS='
 '
 for ref in $refs; do
@@ -33,7 +35,7 @@ for ref in $refs; do
     sed_inplace "s|!\[$ref_id\]\[\]|<img src=\"$ref_url\" title=\"$ref_title\" alt=\"$ref_id\" />|g" "$temp_file"
     sed_inplace "s|\[$ref_id\]\[\]|<a href=\"$ref_url\" title=\"$ref_title\">$ref_id</a>|g" "$temp_file"
 done
-sed_inplace "/^\[[^\]]*\]: +/d" "$temp_file"
+sed_inplace "/^\[[^\]]*\]:  */d" "$temp_file"
 
 # Blocks
 sed_inplace "s/^>!\[/> [!/g" "$temp_file"
@@ -49,10 +51,6 @@ awk -f "$awk_dir/indented_code.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp
 awk -f "$awk_dir/pipe_tables.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
 awk -f "$awk_dir/headers.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
 awk -f "$awk_dir/lists.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
-
-sed_inplace "s/^\*\*\*+$/<hr \/>/g" "$temp_file"
-sed_inplace "s/^---+$/<hr \/>/g" "$temp_file"
-sed_inplace "s/^___+$/<hr \/>/g" "$temp_file"
 
 # Spacing
 awk -f "$awk_dir/breaks.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"

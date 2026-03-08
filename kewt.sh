@@ -32,6 +32,8 @@ dir_indexes = true
 single_file_index = true
 flatten = false
 order = ""
+home_name = "Home"
+show_home_in_nav = true
 footer = "made with <a href="https://kewt.krzak.org">kewt</a>"
 logo = ""
 display_logo = false
@@ -147,7 +149,99 @@ ensure_root_defaults
 [ -z "$src" ] && src="site"
 [ -z "$out" ] && out="out"
 
+src="${src%/}"
+out="${out%/}"
+
 [ -d "$src" ] || die "Source directory '$src' does not exist."
+
+IGNORE_ARGS="-name .git -o -name .kewtignore -o -name .*"
+
+if [ -f "$src/.kewtignore" ]; then
+    while IFS= read -r line || [ -n "$line" ]; do
+        case "$line" in
+            ''|'#'*) continue ;;
+        esac
+        pattern=$(echo "$line" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+        [ -z "$pattern" ] && continue
+
+        pattern_clean="${pattern#/}"
+        pattern_clean="${pattern_clean%/}"
+
+        if echo "$pattern" | grep -q "/"; then
+             IGNORE_ARGS="$IGNORE_ARGS -o -path '$src/$pattern_clean'"
+        else
+             IGNORE_ARGS="$IGNORE_ARGS -o -name '$pattern_clean'"
+        fi
+    done < "$src/.kewtignore"
+fi
+
+for ki in $(find "$src" -name .kewtignore); do
+    d="${ki%/.kewtignore}"
+    if [ "$d" != "$src" ] && [ "$d" != "." ]; then
+        IGNORE_ARGS="$IGNORE_ARGS -o -path '$d'"
+    fi
+done
+
+HIDE_ARGS="-name .git -o -name .kewtignore -o -name .kewthide -o -name .kewtpreserve -o -name .*"
+
+if [ -f "$src/.kewthide" ]; then
+    while IFS= read -r line || [ -n "$line" ]; do
+        case "$line" in
+            ''|'#'*) continue ;;
+        esac
+        pattern=$(echo "$line" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+        [ -z "$pattern" ] && continue
+
+        pattern_clean="${pattern#/}"
+        pattern_clean="${pattern_clean%/}"
+
+        if echo "$pattern" | grep -q "/"; then
+             HIDE_ARGS="$HIDE_ARGS -o -path '$src/$pattern_clean' -o -path '$src/$pattern_clean/*'"
+        else
+             HIDE_ARGS="$HIDE_ARGS -o -name '$pattern_clean'"
+        fi
+    done < "$src/.kewthide"
+fi
+
+for kh in $(find "$src" -name .kewthide); do
+    d="${kh%/.kewthide}"
+    if [ "$d" != "$src" ] && [ "$d" != "." ]; then
+        HIDE_ARGS="$HIDE_ARGS -o -path '$d' -o -path '$d/*'"
+    fi
+done
+
+PRESERVE_ARGS="-false"
+
+if [ -f "$src/.kewtpreserve" ]; then
+    while IFS= read -r line || [ -n "$line" ]; do
+        case "$line" in
+            ''|'#'*) continue ;;
+        esac
+        pattern=$(echo "$line" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+        [ -z "$pattern" ] && continue
+
+        pattern_clean="${pattern#/}"
+        pattern_clean="${pattern_clean%/}"
+
+        if echo "$pattern" | grep -q "/"; then
+             PRESERVE_ARGS="$PRESERVE_ARGS -o -path '$src/$pattern_clean' -o -path '$src/$pattern_clean/*'"
+        else
+             PRESERVE_ARGS="$PRESERVE_ARGS -o -name '$pattern_clean'"
+        fi
+    done < "$src/.kewtpreserve"
+fi
+
+for kp in $(find "$src" -name .kewtpreserve); do
+    d="${kp%/.kewtpreserve}"
+    if [ "$d" != "$src" ] && [ "$d" != "." ]; then
+        PRESERVE_ARGS="$PRESERVE_ARGS -o -path '$d' -o -path '$d/*'"
+    fi
+done
+
+generate_nav() {
+    dinfo=$(eval "find \"$1\" \( $IGNORE_ARGS -o $HIDE_ARGS -o $PRESERVE_ARGS \) -prune -o -print" | sort | awk -v src="$1" -f "$awk_dir/collect_dir_info.awk")
+    eval "find \"$1\" \( $IGNORE_ARGS -o $HIDE_ARGS -o $PRESERVE_ARGS \) -prune -o -name \"*.md\" -print" | sort | awk -v src="$1" -v single_file_index="$single_file_index" -v flatten="$flatten" -v order="$order" -v home_name="$home_name" -v show_home_in_nav="$show_home_in_nav" -v dinfo="$dinfo" -f "$awk_dir/generate_sidebar.awk"
+}
 
 title="kewt"
 style="kewt"
@@ -156,6 +250,8 @@ dir_indexes="true"
 single_file_index="true"
 flatten="false"
 order=""
+home_name="Home"
+show_home_in_nav="true"
 logo=""
 display_logo="false"
 display_title="true"
@@ -188,6 +284,8 @@ load_config() {
             single_file_index) single_file_index="$val" ;;
             flatten) flatten="$val" ;;
             order) order="$val" ;;
+            home_name) home_name="$val" ;;
+            show_home_in_nav) show_home_in_nav="$val" ;;
             footer) footer="$val" ;;
             logo) logo="$val" ;;
             display_logo) display_logo="$val" ;;
@@ -282,14 +380,15 @@ render_markdown() {
         head_extra="<link rel=\"icon\" href=\"$favicon_src\" />"
     fi
 
-    MARKDOWN_SITE_ROOT="$src" MARKDOWN_FALLBACK_FILE="styles/$style.css" sh "$script_dir/markdown.sh" "$file" | awk -v title="$title" -v nav="$nav" -v footer="$footer" -v style_path="$style_path" -v header_brand="$header_brand" -v head_extra="$head_extra" -f "$awk_dir/render_template.awk" "$local_template"
+    MARKDOWN_SITE_ROOT="$src" MARKDOWN_FALLBACK_FILE="$script_dir/styles/$style.css" sh "$script_dir/markdown.sh" "$file" | awk -v title="$title" -v nav="$nav" -v footer="$footer" -v style_path="$style_path" -v header_brand="$header_brand" -v head_extra="$head_extra" -f "$awk_dir/render_template.awk" "$local_template"
 }
 
 echo "Building site from '$src' to '$out'..."
 
-find "$src" \( -name ".*" ! -name "." ! -name ".." -prune \) -o -type d -print | sort | while read -r dir; do
-    rel_dir="${dir#$src/}"
-    [ "$dir" = "$src" ] && rel_dir="."
+eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while read -r dir; do
+    rel_dir="${dir#$src}"
+    rel_dir="${rel_dir#/}"
+    [ -z "$rel_dir" ] && rel_dir="."
     out_dir="$out/$rel_dir"
     mkdir -p "$out_dir"
 
@@ -334,12 +433,13 @@ find "$src" \( -name ".*" ! -name "." ! -name ".." -prune \) -o -type d -print |
     fi
 done
 
-if [ ! -f "$out/styles.css" ] && [ -f "styles/$style.css" ]; then
-    copy_style_with_resolved_vars "styles/$style.css" "$out/styles.css"
+if [ ! -f "$out/styles.css" ] && [ -f "$script_dir/styles/$style.css" ]; then
+    copy_style_with_resolved_vars "$script_dir/styles/$style.css" "$out/styles.css"
 fi
 
-find "$src" \( -name ".*" ! -name "." ! -name ".." -prune \) -o -type f -print | sort | while IFS= read -r file; do
-    rel_path="${file#$src/}"
+eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type f -print" | sort | while IFS= read -r file; do
+    rel_path="${file#$src}"
+    rel_path="${rel_path#/}"
     dir_rel=$(dirname "$rel_path")
     out_dir="$out/$dir_rel"
 
@@ -347,17 +447,23 @@ find "$src" \( -name ".*" ! -name "." ! -name ".." -prune \) -o -type f -print |
         template.html|site.conf|style.css|styles.css) continue ;;
     esac
 
-    if [ "$single_file_index" = "true" ] && [ "${file%.md}" != "$file" ] && [ ! -f "$(dirname "$file")/index.md" ]; then
+    is_preserved=0
+    if [ -n "$(eval "find \"$file\" \( $PRESERVE_ARGS \) -print")" ]; then
+        is_preserved=1
+    fi
+
+    if [ "$single_file_index" = "true" ] && [ "${file%.md}" != "$file" ] && [ "$is_preserved" -eq 0 ] && [ ! -f "$(dirname "$file")/index.md" ]; then
         md_count=$(find "$(dirname "$file")" ! -name "$(basename "$(dirname "$file")")" -prune -name "*.md" | wc -l)
         [ "$md_count" -eq 1 ] && continue
     fi
 
-    if [ "${file%.md}" != "$file" ]; then
+    if [ "${file%.md}" != "$file" ] && [ "$is_preserved" -eq 0 ]; then
         out_file="$out/${rel_path%.md}.html"
         render_markdown "$file" > "$out_file"
     else
         cp "$file" "$out/$rel_path"
     fi
 done
+
 
 echo "Build complete."
