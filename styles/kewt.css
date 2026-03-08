@@ -43,6 +43,15 @@ header h1 {
     font-style: italic;
 }
 
+.site-logo {
+    vertical-align: middle;
+    height: 1.1em;
+    width: auto;
+    border: none;
+    margin-right: 0.2em;
+    margin-top: -0.1em;
+}
+
 header a {
     color: var(--fg);
     text-decoration: none;
