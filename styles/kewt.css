@@ -215,3 +215,8 @@ img {
     image-rendering: pixelated;
     image-rendering: -webkit-optimize-contrast;
 }
+
+footer img {
+    display: inline-block;
+    vertical-align: top;
+}

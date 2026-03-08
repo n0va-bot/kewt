@@ -154,7 +154,7 @@ out="${out%/}"
 
 [ -d "$src" ] || die "Source directory '$src' does not exist."
 
-IGNORE_ARGS="-name '.kewtignore' -o -name '.*'"
+IGNORE_ARGS="-name '.kewtignore' -o -path '$src/.*'"
 
 if [ -f "$src/.kewtignore" ]; then
     while IFS= read -r line || [ -n "$line" ]; do
@@ -184,7 +184,7 @@ while read -r ki; do
 done < "/tmp/kewt_ignore_$$"
 rm -f "/tmp/kewt_ignore_$$"
 
-HIDE_ARGS="-name '.kewtignore' -o -name '.kewthide' -o -name '.kewtpreserve' -o -name '.*'"
+HIDE_ARGS="-name '.kewtignore' -o -name '.kewthide' -o -name '.kewtpreserve' -o -path '$src/.*'"
 
 if [ -f "$src/.kewthide" ]; then
     while IFS= read -r line || [ -n "$line" ]; do
