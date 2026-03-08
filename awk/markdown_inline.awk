@@ -2,6 +2,31 @@ BEGIN {
     in_pre = 0
 }
 
+function mask_html_tags(s,    out, rest, start, len, tag, token) {
+    out = ""
+    rest = s
+    html_tag_count = 0
+    while (match(rest, /<[^>]+>/)) {
+        out = out substr(rest, 1, RSTART - 1)
+        start = RSTART
+        len = RLENGTH
+        tag = substr(rest, start, len)
+        html_tag_count++
+        html_tag_token[html_tag_count] = "\034HT" html_tag_count "\034"
+        html_tag_value[html_tag_count] = tag
+        out = out html_tag_token[html_tag_count]
+        rest = substr(rest, start + len)
+    }
+    return out rest
+}
+
+function restore_html_tags(s,    i) {
+    for (i = 1; i <= html_tag_count; i++) {
+        gsub(html_tag_token[i], html_tag_value[i], s)
+    }
+    return s
+}
+
 {
     if ($0 ~ /<pre>/) {
         in_pre = 1
@@ -114,6 +139,8 @@ BEGIN {
         line = substr(line, 1, start - 1) "<span style=\"font-family: sans-serif;\">" content "</span>" substr(line, start + len)
     }
 
+    line = mask_html_tags(line)
+
     # Bold, Italic, Strikethrough (BRE-like logic in AWK)
     # Strong Bold **
     while (match(line, /\*\*[^*]+\*\*/)) {
@@ -151,6 +178,8 @@ BEGIN {
         repl = "<strike>" content "</strike>"
         line = substr(line, 1, start - 1) repl substr(line, start + len)
     }
+
+    line = restore_html_tags(line)
 
     # special characters
     if (line !~ /&[A-Za-z0-9#]+;/) {
