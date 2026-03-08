@@ -154,7 +154,7 @@ out="${out%/}"
 
 [ -d "$src" ] || die "Source directory '$src' does not exist."
 
-IGNORE_ARGS="-name .git -o -name .kewtignore -o -name .*"
+IGNORE_ARGS="-name '.kewtignore' -o -name '.*'"
 
 if [ -f "$src/.kewtignore" ]; then
     while IFS= read -r line || [ -n "$line" ]; do
@@ -168,21 +168,23 @@ if [ -f "$src/.kewtignore" ]; then
         pattern_clean="${pattern_clean%/}"
 
         if echo "$pattern" | grep -q "/"; then
-             IGNORE_ARGS="$IGNORE_ARGS -o -path '$src/$pattern_clean'"
+             IGNORE_ARGS="$IGNORE_ARGS -o -path '$src/$pattern_clean' -o -path '$src/$pattern_clean/*'"
         else
              IGNORE_ARGS="$IGNORE_ARGS -o -name '$pattern_clean'"
         fi
     done < "$src/.kewtignore"
 fi
 
-for ki in $(find "$src" -name .kewtignore); do
+find "$src" -name .kewtignore > "/tmp/kewt_ignore_$$"
+while read -r ki; do
     d="${ki%/.kewtignore}"
     if [ "$d" != "$src" ] && [ "$d" != "." ]; then
-        IGNORE_ARGS="$IGNORE_ARGS -o -path '$d'"
+        IGNORE_ARGS="$IGNORE_ARGS -o -path '$d' -o -path '$d/*'"
     fi
-done
+done < "/tmp/kewt_ignore_$$"
+rm -f "/tmp/kewt_ignore_$$"
 
-HIDE_ARGS="-name .git -o -name .kewtignore -o -name .kewthide -o -name .kewtpreserve -o -name .*"
+HIDE_ARGS="-name '.kewtignore' -o -name '.kewthide' -o -name '.kewtpreserve' -o -name '.*'"
 
 if [ -f "$src/.kewthide" ]; then
     while IFS= read -r line || [ -n "$line" ]; do
@@ -203,12 +205,14 @@ if [ -f "$src/.kewthide" ]; then
     done < "$src/.kewthide"
 fi
 
-for kh in $(find "$src" -name .kewthide); do
+find "$src" -name .kewthide > "/tmp/kewt_hide_$$"
+while read -r kh; do
     d="${kh%/.kewthide}"
     if [ "$d" != "$src" ] && [ "$d" != "." ]; then
         HIDE_ARGS="$HIDE_ARGS -o -path '$d' -o -path '$d/*'"
     fi
-done
+done < "/tmp/kewt_hide_$$"
+rm -f "/tmp/kewt_hide_$$"
 
 PRESERVE_ARGS="-false"
 
@@ -231,12 +235,14 @@ if [ -f "$src/.kewtpreserve" ]; then
     done < "$src/.kewtpreserve"
 fi
 
-for kp in $(find "$src" -name .kewtpreserve); do
+find "$src" -name .kewtpreserve > "/tmp/kewt_preserve_$$"
+while read -r kp; do
     d="${kp%/.kewtpreserve}"
     if [ "$d" != "$src" ] && [ "$d" != "." ]; then
         PRESERVE_ARGS="$PRESERVE_ARGS -o -path '$d' -o -path '$d/*'"
     fi
-done
+done < "/tmp/kewt_preserve_$$"
+rm -f "/tmp/kewt_preserve_$$"
 
 generate_nav() {
     dinfo=$(eval "find \"$1\" \( $IGNORE_ARGS -o $HIDE_ARGS -o $PRESERVE_ARGS \) -prune -o -print" | sort | awk -v src="$1" -f "$awk_dir/collect_dir_info.awk")
