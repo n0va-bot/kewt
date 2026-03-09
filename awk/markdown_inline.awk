@@ -31,7 +31,7 @@ function restore_html_tags(s,    i) {
     if ($0 ~ /<pre>/) {
         in_pre = 1
     }
-    
+
     if (in_pre) {
         print
         if ($0 ~ /<\/pre>/) {
@@ -185,7 +185,7 @@ function restore_html_tags(s,    i) {
     if (line !~ /&[A-Za-z0-9#]+;/) {
         gsub(/&/, "&amp;", line)
     }
-    
+
     p = 1
     while (match(substr(line, p), /</)) {
         start = p + RSTART - 1
