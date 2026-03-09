@@ -41,6 +41,8 @@ flatten = false
 order = ""
 home_name = "Home"
 show_home_in_nav = true
+nav_links = ""
+nav_extra = ""
 footer = "made with <a href="https://kewt.krzak.org">kewt</a>"
 logo = ""
 display_logo = false
@@ -57,6 +59,8 @@ favicon = ""
 - `order` comma separated file/directory name list to order the sidebar (alphabetical by default)
 - `home_name` text for the home link in navigation (default: "Home")
 - `show_home_in_nav` show home link in navigation (default: true)
+- `nav_links` comma separated extra nav links, as bare URLs or Markdown links like `[Label](https://example.com)`
+- `nav_extra` raw HTML appended inside the `<nav>` after the generated link list
 - `footer` footer html/text shown at the bottom of pages
 - `logo` logo image path (used in header if enabled)
 - `display_logo` show logo in header

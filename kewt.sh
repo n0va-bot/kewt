@@ -34,6 +34,8 @@ flatten = false
 order = ""
 home_name = "Home"
 show_home_in_nav = true
+nav_links = ""
+nav_extra = ""
 footer = "made with <a href="https://kewt.krzak.org">kewt</a>"
 logo = ""
 display_logo = false
@@ -258,6 +260,9 @@ flatten="false"
 order=""
 home_name="Home"
 show_home_in_nav="true"
+nav_links=""
+nav_extra=""
+footer="made with <a href=\"https://kewt.krzak.org\">kewt</a>"
 logo=""
 display_logo="false"
 display_title="true"
@@ -292,6 +297,8 @@ load_config() {
             order) order="$val" ;;
             home_name) home_name="$val" ;;
             show_home_in_nav) show_home_in_nav="$val" ;;
+            nav_links) nav_links="$val" ;;
+            nav_extra) nav_extra="$val" ;;
             footer) footer="$val" ;;
             logo) logo="$val" ;;
             display_logo) display_logo="$val" ;;
@@ -305,6 +312,64 @@ load_config() {
 load_config "./site.conf"
 load_config "$src/site.conf"
 
+escape_html_text() {
+    printf '%s' "$1" | sed \
+        -e 's/&/\&amp;/g' \
+        -e 's/</\&lt;/g' \
+        -e 's/>/\&gt;/g'
+}
+
+escape_html_attr() {
+    printf '%s' "$1" | sed \
+        -e 's/&/\&amp;/g' \
+        -e 's/"/\&quot;/g' \
+        -e 's/</\&lt;/g' \
+        -e 's/>/\&gt;/g'
+}
+
+nav_links_html() {
+    [ -n "$nav_links" ] || return
+
+    old_ifs=$IFS
+    set -f
+    IFS=','
+    set -- $nav_links
+    IFS=$old_ifs
+    set +f
+
+    [ $# -gt 0 ] || return
+
+    printf '<ul class="nav-extra-links">\n'
+    for raw_link in "$@"; do
+        link=$(printf '%s' "$raw_link" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+        [ -n "$link" ] || continue
+
+        case "$link" in
+            \[*\]\(*\))
+                label=${link#\[}
+                label=${label%%\]*}
+                link_url=${link#*](}
+                link_url=${link_url%)}
+                ;;
+            *)
+                link_url=$link
+                label=$(printf '%s' "$link" | sed \
+                    -e 's|^[A-Za-z][A-Za-z0-9+.-]*://||' \
+                    -e 's|/$||')
+                [ -n "$label" ] || label="$link"
+                ;;
+        esac
+
+        [ -n "$link_url" ] || continue
+        [ -n "$label" ] || label="$link_url"
+
+        link_attr=$(escape_html_attr "$link_url")
+        label_text=$(escape_html_text "$label")
+        printf '<li><a href="%s">%s</a></li>\n' "$link_attr" "$label_text"
+    done
+    printf '</ul>'
+}
+
 template="$src/template.html"
 [ -f "$template" ] || template="./template.html"
 [ -f "$template" ] || die "Template '$template' not found."
@@ -313,6 +378,15 @@ template="$src/template.html"
 mkdir -p "$out"
 
 nav=$(generate_nav "$src")
+extra_links=$(nav_links_html)
+if [ -n "$extra_links" ]; then
+    nav="$nav
+$extra_links"
+fi
+if [ -n "$nav_extra" ]; then
+    nav="$nav
+$nav_extra"
+fi
 
 find_closest() {
     target="$1"
