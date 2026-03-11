@@ -6,11 +6,12 @@ die() {
 }
 
 usage() {
+    invoked_as="${KEWT_INVOKED_AS:-$0}"
     cat <<EOF
-Usage: $0 [--from <src>] [--to <out>]
-       $0 [src] [out]
-       $0 --new [title]
-       $0 --help
+Usage: $invoked_as [--from <src>] [--to <out>]
+       $invoked_as [src] [out]
+       $invoked_as --new [title]
+       $invoked_as --help
 
 Options:
   --help         Show this help message.
@@ -22,6 +23,9 @@ EOF
 
 script_dir=$(CDPATH="" cd -- "$(dirname -- "$0")" && pwd)
 awk_dir="$script_dir/awk"
+
+KEWT_TMPDIR=$(mktemp -d "/tmp/kewt_run.XXXXXX")
+trap 'rm -rf "$KEWT_TMPDIR"' EXIT HUP INT TERM
 
 ensure_root_defaults() {
     if [ ! -f "./site.conf" ]; then
@@ -174,14 +178,14 @@ if [ -f "$src/.kewtignore" ]; then
     done < "$src/.kewtignore"
 fi
 
-find "$src" -name .kewtignore > "/tmp/kewt_ignore_$$"
+find "$src" -name .kewtignore > "$KEWT_TMPDIR/kewt_ignore"
 while read -r ki; do
     d="${ki%/.kewtignore}"
     if [ "$d" != "$src" ] && [ "$d" != "." ]; then
         IGNORE_ARGS="$IGNORE_ARGS -o -path '$d' -o -path '$d/*'"
     fi
-done < "/tmp/kewt_ignore_$$"
-rm -f "/tmp/kewt_ignore_$$"
+done < "$KEWT_TMPDIR/kewt_ignore"
+rm -f "$KEWT_TMPDIR/kewt_ignore"
 
 HIDE_ARGS="-name '.kewtignore' -o -name '.kewthide' -o -name '.kewtpreserve' -o -path '$src/.*'"
 
@@ -204,14 +208,14 @@ if [ -f "$src/.kewthide" ]; then
     done < "$src/.kewthide"
 fi
 
-find "$src" -name .kewthide > "/tmp/kewt_hide_$$"
+find "$src" -name .kewthide > "$KEWT_TMPDIR/kewt_hide"
 while read -r kh; do
     d="${kh%/.kewthide}"
     if [ "$d" != "$src" ] && [ "$d" != "." ]; then
         HIDE_ARGS="$HIDE_ARGS -o -path '$d' -o -path '$d/*'"
     fi
-done < "/tmp/kewt_hide_$$"
-rm -f "/tmp/kewt_hide_$$"
+done < "$KEWT_TMPDIR/kewt_hide"
+rm -f "$KEWT_TMPDIR/kewt_hide"
 
 PRESERVE_ARGS="-false"
 
@@ -234,14 +238,14 @@ if [ -f "$src/.kewtpreserve" ]; then
     done < "$src/.kewtpreserve"
 fi
 
-find "$src" -name .kewtpreserve > "/tmp/kewt_preserve_$$"
+find "$src" -name .kewtpreserve > "$KEWT_TMPDIR/kewt_preserve"
 while read -r kp; do
     d="${kp%/.kewtpreserve}"
     if [ "$d" != "$src" ] && [ "$d" != "." ]; then
         PRESERVE_ARGS="$PRESERVE_ARGS -o -path '$d' -o -path '$d/*'"
     fi
-done < "/tmp/kewt_preserve_$$"
-rm -f "/tmp/kewt_preserve_$$"
+done < "$KEWT_TMPDIR/kewt_preserve"
+rm -f "$KEWT_TMPDIR/kewt_preserve"
 
 generate_nav() {
     dinfo=$(eval "find \"$1\" \( $IGNORE_ARGS -o $HIDE_ARGS -o $PRESERVE_ARGS \) -prune -o -print" | sort | awk -v src="$1" -f "$awk_dir/collect_dir_info.awk")
@@ -488,7 +492,7 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
             fi
         fi
 
-        temp_index="/tmp/kewt_index_$$.md"
+        temp_index="$KEWT_TMPDIR/index.md"
         display_dir="${rel_dir#.}"
         [ -z "$display_dir" ] && display_dir="/"
         echo "# Index of $display_dir" > "$temp_index"

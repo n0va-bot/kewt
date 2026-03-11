@@ -20,7 +20,8 @@ trap 'rm -rf "$tmpdir"' EXIT HUP INT TERM
 sed '1,/^#==PAYLOAD==$/d' "$0" | tar -xz -C "$tmpdir"
 
 # Pass control to the extracted script
-exec "$tmpdir/kewt.sh" "$@"
+KEWT_INVOKED_AS="$0" "$tmpdir/kewt.sh" "$@"
+exit $?
 
 #==PAYLOAD==
 EOF
