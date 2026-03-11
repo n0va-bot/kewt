@@ -81,9 +81,10 @@ jobs:
           sed -e "s/VERSION_PLACEHOLDER/${VERSION}/g" \
               -e "s/SHA256SUM_PLACEHOLDER/${CHECKSUM}/g" \
               packaging/AUR/PKGBUILD.template > aur-work/PKGBUILD
-              
+          
+          # Generate .SRCINFO
           cd aur-work
-          docker run --rm -v $(pwd):/pkg archlinux:base-devel bash -c "useradd builduser -m && chown -R builduser:builduser /pkg && sudo -u builduser bash -c 'cd /pkg && makepkg --printsrcinfo > .SRCINFO'"
+          makepkg --printsrcinfo > .SRCINFO
 
       - name: Publish to AUR
         uses: KSXGitHub/github-actions-deploy-aur@v3.0.1
