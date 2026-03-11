@@ -28,6 +28,11 @@ curl -L -o kewt https://git.krzak.org/N0VA/kewt/releases/latest/download/kewt
 chmod +x kewt
 ```
 
+On Arch Linux, _kewt_ is available on the AUR:
+
+- [kewt-bin](https://aur.archlinux.org/packages/kewt-bin) — prebuilt standalone binary from the latest release
+- [kewt-git](https://aur.archlinux.org/packages/kewt-git) — built from the latest git source
+
 ## Usage
 
 ```sh
