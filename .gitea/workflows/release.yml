@@ -27,3 +27,46 @@ jobs:
           files: |-
             kewt
           api_key: '${{secrets.GITEA_TOKEN}}'
+
+  publish-aur:
+    runs-on: local
+    needs: build
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Arch Linux environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pacman-package-manager curl jq || true
+          
+      - name: Render PKGBUILD and SRCINFO
+        run: |
+          # Get latest release version
+          VERSION=${GITHUB_REF#refs/tags/v}
+          VERSION=${VERSION#refs/tags/}
+          
+          # Download the asset
+          curl -sL -o kewt https://git.krzak.org/N0VA/kewt/releases/download/v${VERSION}/kewt
+          
+          # Calculate checksum
+          CHECKSUM=$(sha256sum kewt | awk '{print $1}')
+          
+          # Render PKGBUILD
+          mkdir -p aur-work
+          sed -e "s/VERSION_PLACEHOLDER/${VERSION}/g" \
+              -e "s/SHA256SUM_PLACEHOLDER/${CHECKSUM}/g" \
+              packaging/AUR/PKGBUILD.template > aur-work/PKGBUILD
+              
+          cd aur-work
+          docker run --rm -v $(pwd):/pkg archlinux:base-devel bash -c "useradd builduser -m && chown -R builduser:builduser /pkg && sudo -u builduser bash -c 'cd /pkg && makepkg --printsrcinfo > .SRCINFO'"
+
+      - name: Publish to AUR
+        uses: KSXGitHub/github-actions-deploy-aur@v3.0.1
+        with:
+          pkgname: kewt-bin
+          pkgbuild: ./aur-work/PKGBUILD
+          commit_username: ${{ github.actor }}
+          commit_email: ${{ github.actor }}@users.noreply.github.com
+          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          commit_message: "Update kewt-bin to ${{ github.ref_name }}"
