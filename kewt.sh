@@ -20,7 +20,7 @@ Options:
 EOF
 }
 
-script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+script_dir=$(CDPATH="" cd -- "$(dirname -- "$0")" && pwd)
 awk_dir="$script_dir/awk"
 
 ensure_root_defaults() {
@@ -93,10 +93,7 @@ create_new_site() {
     exit 0
 }
 
-generate_nav() {
-    dinfo=$(find "$1" \( -name ".*" ! -name "." ! -name ".." -prune \) -o -print | sort | awk -v src="$1" -f "$awk_dir/collect_dir_info.awk")
-    find "$1" \( -name ".*" ! -name "." ! -name ".." -prune \) -o -name "*.md" -print | sort | awk -v src="$1" -v single_file_index="$single_file_index" -v flatten="$flatten" -v order="$order" -v dinfo="$dinfo" -f "$awk_dir/generate_sidebar.awk"
-}
+
 
 src=""
 out=""
@@ -133,9 +130,9 @@ while [ $# -gt 0 ]; do
         *)
             positional_count=$((positional_count + 1))
             if [ "$positional_count" -eq 1 ]; then
-                [ -z "$src" ] && src="$1" || die "Source already set (use either positional or --from)."
+                if [ -z "$src" ]; then src="$1"; else die "Source already set (use either positional or --from)."; fi
             elif [ "$positional_count" -eq 2 ]; then
-                [ -z "$out" ] && out="$1" || die "Output already set (use either positional or --to)."
+                if [ -z "$out" ]; then out="$1"; else die "Output already set (use either positional or --to)."; fi
             else
                 die "Too many positional arguments."
             fi
@@ -333,6 +330,7 @@ nav_links_html() {
     old_ifs=$IFS
     set -f
     IFS=','
+    # shellcheck disable=SC2086
     set -- $nav_links
     IFS=$old_ifs
     set +f
@@ -418,7 +416,7 @@ render_markdown() {
     closest_style_src=$(find_closest "styles.css" "$(dirname "$file")")
     [ -z "$closest_style_src" ] && closest_style_src=$(find_closest "style.css" "$(dirname "$file")")
     if [ -n "$closest_style_src" ]; then
-        style_rel_to_src="${closest_style_src#$src/}"
+        style_rel_to_src="${closest_style_src#"$src"/}"
         case "$closest_style_src" in
             "$src/styles.css") style_rel_to_src="styles.css" ;;
             "$src/style.css") style_rel_to_src="style.css" ;;
@@ -466,7 +464,7 @@ render_markdown() {
 echo "Building site from '$src' to '$out'..."
 
 eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while read -r dir; do
-    rel_dir="${dir#$src}"
+    rel_dir="${dir#"$src"}"
     rel_dir="${rel_dir#/}"
     [ -z "$rel_dir" ] && rel_dir="."
     out_dir="$out/$rel_dir"
@@ -518,7 +516,7 @@ if [ ! -f "$out/styles.css" ] && [ -f "$script_dir/styles/$style.css" ]; then
 fi
 
 eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type f -print" | sort | while IFS= read -r file; do
-    rel_path="${file#$src}"
+    rel_path="${file#"$src"}"
     rel_path="${rel_path#/}"
     dir_rel=$(dirname "$rel_path")
     out_dir="$out/$dir_rel"

@@ -1,0 +1,24 @@
+name: Release Standalone Builder
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build standalone executable
+        run: |
+          chmod +x tools/build-standalone.sh
+          ./tools/build-standalone.sh
+
+      - name: Upload Release Asset
+        uses: https://gitea.com/actions/release-action@main
+        with:
+          files: |-
+            kewt
+          api_key: '${{secrets.GITEA_TOKEN}}'

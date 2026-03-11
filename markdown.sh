@@ -1,16 +1,18 @@
 #!/bin/sh
 
-script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+script_dir=$(CDPATH="" cd -- "$(dirname -- "$0")" && pwd)
 awk_dir="$script_dir/awk"
 
 sed_inplace() {
     script="$1"
     file="$2"
     tmp="${file}.tmp.$$"
-    sed "$script" "$file" > "$tmp" && mv "$tmp" "$file" || {
+    if sed "$script" "$file" > "$tmp" && mv "$tmp" "$file"; then
+        return 0
+    else
         rm -f "$tmp"
         return 1
-    }
+    fi
 }
 
 temp_file="/tmp/markdown.$$.md"
