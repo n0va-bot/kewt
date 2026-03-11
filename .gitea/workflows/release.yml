@@ -66,25 +66,37 @@ jobs:
           
       - name: Render PKGBUILD and SRCINFO
         run: |
-          # Get latest release version
           VERSION=${GITHUB_REF#refs/tags/v}
           VERSION=${VERSION#refs/tags/}
           
-          # Download the asset
           curl -sL -o kewt https://git.krzak.org/N0VA/kewt/releases/download/v${VERSION}/kewt
           
-          # Calculate checksum
           CHECKSUM=$(sha256sum kewt | awk '{print $1}')
           
-          # Render PKGBUILD
           mkdir -p aur-work
           sed -e "s/VERSION_PLACEHOLDER/${VERSION}/g" \
               -e "s/SHA256SUM_PLACEHOLDER/${CHECKSUM}/g" \
               packaging/AUR/PKGBUILD.template > aur-work/PKGBUILD
           
-          # Generate .SRCINFO
-          cd aur-work
-          makepkg --printsrcinfo > .SRCINFO
+          cat > aur-work/.SRCINFO << SRCEOF
+          pkgbase = kewt-bin
+          	pkgdesc = A minimalist, 100% POSIX static site generator inspired by werc and kew
+          	pkgver = ${VERSION}
+          	pkgrel = 1
+          	url = https://git.krzak.org/N0VA/kewt
+          	arch = any
+          	license = MIT
+          	depends = sh
+          	provides = kewt
+          	conflicts = kewt
+          	conflicts = kewt-git
+          	source = kewt-bin-${VERSION}.sh::https://git.krzak.org/N0VA/kewt/releases/download/v${VERSION}/kewt
+          	sha256sums = ${CHECKSUM}
+          
+          pkgname = kewt-bin
+          SRCEOF
+          # Remove leading whitespace from heredoc
+          sed -i 's/^          //' aur-work/.SRCINFO
 
       - name: Publish to AUR
         uses: KSXGitHub/github-actions-deploy-aur@v3.0.1
