@@ -16,6 +16,11 @@ jobs:
           chmod +x tools/build-standalone.sh
           ./tools/build-standalone.sh
 
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
       - name: Upload Release Asset
         uses: https://gitea.com/actions/release-action@main
         with:
