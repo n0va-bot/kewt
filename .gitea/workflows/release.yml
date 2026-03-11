@@ -28,6 +28,30 @@ jobs:
             kewt
           api_key: '${{secrets.GITEA_TOKEN}}'
 
+      - name: Push to GitHub Release
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          
+          # Create the release on GitHub
+          curl -sL -X POST \
+            -H "Authorization: token ${{ secrets.GH_RELEASE_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/n0va-bot/kewt/releases" \
+            -d "{\"tag_name\":\"${TAG}\",\"name\":\"${TAG}\",\"draft\":false,\"prerelease\":false}" || true
+          
+          # Get the release ID
+          RELEASE_ID=$(curl -sL \
+            -H "Authorization: token ${{ secrets.GH_RELEASE_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/n0va-bot/kewt/releases/tags/${TAG}" | jq -r '.id')
+          
+          # Upload the asset
+          curl -sL -X POST \
+            -H "Authorization: token ${{ secrets.GH_RELEASE_TOKEN }}" \
+            -H "Content-Type: application/octet-stream" \
+            "https://uploads.github.com/repos/n0va-bot/kewt/releases/${RELEASE_ID}/assets?name=kewt" \
+            --data-binary @kewt
+
   publish-aur:
     runs-on: local
     needs: build
