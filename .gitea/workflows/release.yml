@@ -80,7 +80,7 @@ jobs:
           
           cat > aur-work/.SRCINFO << SRCEOF
           pkgbase = kewt-bin
-          	pkgdesc = A minimalist, 100% POSIX static site generator inspired by werc and kew
+          	pkgdesc = A minimalist, 100% POSIX, static site generator inspired by werc and kew
           	pkgver = ${VERSION}
           	pkgrel = 1
           	url = https://git.krzak.org/N0VA/kewt
