@@ -6,7 +6,7 @@ die() {
 }
 
 usage() {
-    invoked_as="${KEWT_INVOKED_AS:-$0}"
+    invoked_as=$(basename "${KEWT_INVOKED_AS:-$0}")
     cat <<EOF
 Usage: $invoked_as [--from <src>] [--to <out>]
        $invoked_as [src] [out]
@@ -155,7 +155,14 @@ ensure_root_defaults
 src="${src%/}"
 out="${out%/}"
 
-[ -d "$src" ] || die "Source directory '$src' does not exist."
+if [ ! -d "$src" ]; then
+    if [ "$src" = "site" ]; then
+        usage
+        exit 1
+    else
+        die "Source directory '$src' does not exist."
+    fi
+fi
 
 IGNORE_ARGS="-name '.kewtignore' -o -path '$src/.*'"
 
