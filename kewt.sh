@@ -46,6 +46,9 @@ display_logo = false
 display_title = true
 logo_as_favicon = true
 favicon = ""
+generate_page_title = true
+error_page = "not_found.html"
+versioning = false
 EOF
     fi
 
@@ -276,6 +279,9 @@ display_logo="false"
 display_title="true"
 logo_as_favicon="true"
 favicon=""
+generate_page_title="true"
+error_page="not_found.html"
+versioning="false"
 
 load_config() {
     [ -f "$1" ] || return
@@ -313,12 +319,20 @@ load_config() {
             display_title) display_title="$val" ;;
             logo_as_favicon) logo_as_favicon="$val" ;;
             favicon) favicon="$val" ;;
+            generate_page_title) generate_page_title="$val" ;;
+            error_page) error_page="$val" ;;
+            versioning) versioning="$val" ;;
         esac
     done < "$1"
 }
 
 load_config "./site.conf"
 load_config "$src/site.conf"
+
+asset_version=""
+if [ "$versioning" = "true" ]; then
+    asset_version="?v=$(date +%s)"
+fi
 
 escape_html_text() {
     printf '%s' "$1" | sed \
@@ -469,7 +483,21 @@ render_markdown() {
         head_extra="<link rel=\"icon\" href=\"$favicon_src\" />"
     fi
 
-    MARKDOWN_SITE_ROOT="$src" MARKDOWN_FALLBACK_FILE="$script_dir/styles/$style.css" sh "$script_dir/markdown.sh" "$file" | awk -v title="$title" -v nav="$nav" -v footer="$footer" -v style_path="$style_path" -v header_brand="$header_brand" -v head_extra="$head_extra" -f "$awk_dir/render_template.awk" "$local_template"
+    page_title="$title"
+    if [ "$generate_page_title" = "true" ] && [ -n "$file" ] && [ -f "$file" ]; then
+        first_heading=$(grep -m 1 '^# ' "$file" | sed 's/^# *//; s/ *$//')
+        if [ -n "$first_heading" ]; then
+            page_title="$first_heading - $title"
+        else
+            basename_no_ext=$(basename "$file" .md)
+            if [ "$basename_no_ext" != "index" ] && [ "$basename_no_ext" != "404_gen" ]; then
+                cap_basename=$(echo "$basename_no_ext" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')
+                page_title="$cap_basename - $title"
+            fi
+        fi
+    fi
+
+    MARKDOWN_SITE_ROOT="$src" MARKDOWN_FALLBACK_FILE="$script_dir/styles/$style.css" sh "$script_dir/markdown.sh" "$file" | awk -v title="$page_title" -v nav="$nav" -v footer="$footer" -v style_path="${style_path}${asset_version}" -v header_brand="$header_brand" -v head_extra="$head_extra" -f "$awk_dir/render_template.awk" "$local_template"
 }
 
 echo "Building site from '$src' to '$out'..."
@@ -554,5 +582,13 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type f -print" | sort | while 
     fi
 done
 
+if [ -n "$error_page" ] && [ ! -f "$out/$error_page" ]; then
+    temp_404="$KEWT_TMPDIR/404_gen.md"
+    echo "# 404 - Not Found" > "$temp_404"
+    echo "" >> "$temp_404"
+    echo "The requested page could not be found." >> "$temp_404"
+    render_markdown "$temp_404" > "$out/$error_page"
+    rm -f "$temp_404"
+fi
 
 echo "Build complete."
