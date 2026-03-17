@@ -16,6 +16,8 @@ It's meant to be a static site generator, like _[kew](https://github.com/uint23/
 - Inline html support
 - MFM `$font` and `\<plain>` tags
 - Admonition support (that's what the blocks like the warning block below are called)
+- RSS/Feed generation and Sitemap support
+- Post creation via `--post`
 
 If you want to **force** a file to be inlined, use `\!![]` instead of `\![]`
 
@@ -38,11 +40,14 @@ On Arch Linux, _kewt_ is available on the AUR:
 ```sh
 ./kewt.sh --help
 ./kewt.sh --new [title]
+./kewt.sh --post
 ./kewt.sh --from <src> --to <out>
 ./kewt.sh [src] [out]
 ```
 
 `--new [title]` creates a new site directory with a copied `site.conf` and a default `index.md`.
+
+`--post` creates a new empty markdown file in the configured `posts_dir` with the current date and time as the name.
 
 ## site.conf
 
@@ -66,6 +71,10 @@ favicon = ""
 generate_page_title = true
 error_page = "not_found.html"
 versioning = false
+base_url = ""
+generate_feed = false
+feed_file = "rss.xml"
+posts_dir = ""
 ```
 
 - `title` site title
@@ -87,6 +96,10 @@ versioning = false
 - `generate_page_title` automatically generate title text from the first markdown heading or filename (default: true)
 - `error_page` filename for the generated 404 error page (default: "not_found.html", empty to disable)
 - `versioning` append a version query parameter (`?v=timestamp`) to css asset urls to bypass cache (default: false)
+- `base_url` absolute URL of the site, used for sitemap and RSS feed generation
+- `generate_feed` enable RSS feed generation (requires `base_url`)
+- `feed_file` filename for the generated RSS feed (default: "rss.xml")
+- `posts_dir` directory name containing posts (e.g., "posts"). Enables reverse-chronological sorting, title headings in indexes, and automatic backlinks.
 
 ## Ignores
 
@@ -108,5 +121,5 @@ versioning = false
 
 - Default css style and html template based on _[kew](https://github.com/uint23/kew)_ by [uint23](https://github.com/uint23)
 
->![WARNING]
+>[!WARNING]
 >Most of this was coded at night, while sleepy and a bit sick, and after walking for about 4 hours around a forest, so...
