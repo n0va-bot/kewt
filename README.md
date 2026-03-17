@@ -26,7 +26,7 @@ If you want to **force** a file to be inlined, use `\!![]` instead of `\![]`
 You can clone the repository to use `kewt.sh` directly, or you can download the standalone executable, which bundles all dependencies into a single file:
 
 ```sh
-curl -L -o kewt https://git.krzak.org/N0VA/kewt/releases/latest/download/kewt
+curl -L -o kewt https://git.krzak.org/N0VA/kewt/releases/download/latest/kewt
 chmod +x kewt
 ```
 
