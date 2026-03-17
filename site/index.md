@@ -63,6 +63,9 @@ display_logo = false
 display_title = true
 logo_as_favicon = true
 favicon = ""
+generate_page_title = true
+error_page = "not_found.html"
+versioning = false
 ```
 
 - `title` site title
@@ -81,6 +84,9 @@ favicon = ""
 - `display_title` show title text in header
 - `logo_as_favicon` use `logo` as favicon
 - `favicon` explicit favicon path (used when `logo_as_favicon` is false or no logo is set)
+- `generate_page_title` automatically generate title text from the first markdown heading or filename (default: true)
+- `error_page` filename for the generated 404 error page (default: "not_found.html", empty to disable)
+- `versioning` append a version query parameter (`?v=timestamp`) to css asset urls to bypass cache (default: false)
 
 ## Ignores
 
