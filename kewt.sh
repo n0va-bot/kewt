@@ -487,6 +487,7 @@ render_markdown() {
     if [ "$generate_page_title" = "true" ] && [ -n "$file" ] && [ -f "$file" ]; then
         first_heading=$(grep -m 1 '^# ' "$file" | sed 's/^# *//; s/ *$//')
         if [ -n "$first_heading" ]; then
+            first_heading=$(echo "$first_heading" | sed -e 's/\[//g' -e 's/\]//g' -e 's/!//g' -e 's/\*//g' -e 's/_//g' -e 's/`//g' -e 's/([^)]*)//g' | sed 's/\\//g')
             page_title="$first_heading - $title"
         else
             basename_no_ext=$(basename "$file" .md)
