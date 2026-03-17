@@ -11,13 +11,15 @@ usage() {
 Usage: $invoked_as [--from <src>] [--to <out>]
        $invoked_as [src] [out]
        $invoked_as --new [title]
+       $invoked_as --update [dir]
        $invoked_as --help
 
 Options:
-  --help         Show this help message.
-  --new [title]  Create a new site directory (default: site)
-  --from <src>   Source directory (default: site)
-  --to <out>     Output directory (default: out)
+  --help          Show this help message.
+  --new [title]   Create a new site directory (default: site)
+  --update [dir]  Update site.conf and template.html with latest defaults (defaults to current directory)
+  --from <src>    Source directory (default: site)
+  --to <out>      Output directory (default: out)
 EOF
 }
 
@@ -102,6 +104,103 @@ create_new_site() {
     exit 0
 }
 
+update_site() {
+    update_dir="${1:-.}"
+    [ -d "$update_dir" ] || die "Directory '$update_dir' does not exist."
+
+    target_conf="$update_dir/site.conf"
+    target_tmpl="$update_dir/template.html"
+
+    # Generate default site.conf
+    default_conf="$KEWT_TMPDIR/default_site.conf"
+    cat > "$default_conf" <<'CONFEOF'
+title = "kewt"
+style = "kewt"
+dir_indexes = true
+single_file_index = true
+flatten = false
+order = ""
+home_name = "Home"
+show_home_in_nav = true
+nav_links = ""
+nav_extra = ""
+footer = "made with <a href="https://kewt.krzak.org">kewt</a>"
+logo = ""
+display_logo = false
+display_title = true
+logo_as_favicon = true
+favicon = ""
+generate_page_title = true
+error_page = "not_found.html"
+versioning = false
+enable_header_links = true
+base_url = ""
+CONFEOF
+
+    # Update site.conf: add missing keys
+    if [ ! -f "$target_conf" ]; then
+        echo "No site.conf found in '$update_dir'; nothing to update."
+    else
+        added=0
+        while IFS= read -r line; do
+            case "$line" in
+                ''|'#'*) continue ;;
+                *=*) ;;
+                *) continue ;;
+            esac
+            key=$(printf '%s' "${line%%=*}" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+            if ! grep -q "^[[:space:]]*${key}[[:space:]]*=" "$target_conf"; then
+                printf '%s\n' "$line" >> "$target_conf"
+                echo "  Added: $key"
+                added=$((added + 1))
+            fi
+        done < "$default_conf"
+        if [ "$added" -eq 0 ]; then
+            echo "site.conf is already up to date."
+        else
+            echo "Added $added new key(s) to '$target_conf'."
+        fi
+    fi
+
+    # Update template.html
+    if [ -f "$target_tmpl" ]; then
+        default_tmpl="$KEWT_TMPDIR/default_template.html"
+        cat > "$default_tmpl" <<'TMPLEOF'
+<!doctype html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <title>{{TITLE}}</title>
+
+        <link rel="stylesheet" href="{{CSS}}" type="text/css" />
+        {{HEAD_EXTRA}}
+    </head>
+
+    <body>
+        <header>
+            <h1>{{HEADER_BRAND}}</h1>
+        </header>
+
+        <nav id="side-bar">{{NAV}}</nav>
+
+        <article>{{CONTENT}}</article>
+        <footer>{{FOOTER}}</footer>
+    </body>
+</html>
+TMPLEOF
+        if cmp -s "$default_tmpl" "$target_tmpl" 2>/dev/null; then
+            echo "template.html is already up to date."
+        else
+            cp "$default_tmpl" "${target_tmpl}.default"
+            echo "template.html has local changes; saved latest default as '${target_tmpl}.default'."
+            echo ""
+            diff "$target_tmpl" "${target_tmpl}.default" || true
+        fi
+    fi
+
+    exit 0
+}
+
 
 
 src=""
@@ -122,6 +221,14 @@ while [ $# -gt 0 ]; do
                 new_title="$2"
                 shift
             fi
+            ;;
+        --update)
+            update_dir="."
+            if [ $# -gt 1 ] && [ "${2#-}" = "$2" ]; then
+                update_dir="$2"
+                shift
+            fi
+            update_site "$update_dir"
             ;;
         --from)
             [ $# -lt 2 ] && die "--from requires a value."
