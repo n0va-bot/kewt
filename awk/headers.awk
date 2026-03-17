@@ -8,18 +8,21 @@ function strip_markdown(s) {
     return s
 }
 function print_header(line) {
-    if (line ~ /^# /) {
-        sub(/^# /, "", line); print "<h1 id=\"" strip_markdown(line) "\">" line "</h1>"
-    } else if (line ~ /^## /) {
-        sub(/^## /, "", line); print "<h2 id=\"" strip_markdown(line) "\">" line "</h2>"
-    } else if (line ~ /^### /) {
-        sub(/^### /, "", line); print "<h3 id=\"" strip_markdown(line) "\">" line "</h3>"
-    } else if (line ~ /^#### /) {
-        sub(/^#### /, "", line); print "<h4 id=\"" strip_markdown(line) "\">" line "</h4>"
-    } else if (line ~ /^##### /) {
-        sub(/^##### /, "", line); print "<h5 id=\"" strip_markdown(line) "\">" line "</h5>"
-    } else if (line ~ /^###### /) {
-        sub(/^###### /, "", line); print "<h6 id=\"" strip_markdown(line) "\">" line "</h6>"
+    tag = ""
+    if (line ~ /^# /) { tag = "h1"; sub(/^# /, "", line) }
+    else if (line ~ /^## /) { tag = "h2"; sub(/^## /, "", line) }
+    else if (line ~ /^### /) { tag = "h3"; sub(/^### /, "", line) }
+    else if (line ~ /^#### /) { tag = "h4"; sub(/^#### /, "", line) }
+    else if (line ~ /^##### /) { tag = "h5"; sub(/^##### /, "", line) }
+    else if (line ~ /^###### /) { tag = "h6"; sub(/^###### /, "", line) }
+
+    if (tag != "") {
+        id = strip_markdown(line)
+        if (enable_header_links == "true") {
+            print "<" tag " id=\"" id "\"><a href=\"#" id "\" class=\"header-anchor\">" line "</a></" tag ">"
+        } else {
+            print "<" tag " id=\"" id "\">" line "</" tag ">"
+        }
     } else {
         print line
     }

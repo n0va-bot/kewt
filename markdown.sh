@@ -51,7 +51,7 @@ awk -f "$awk_dir/blockquote_to_admonition.awk" "$temp_file" > "$temp_file.tmp" &
 awk -f "$awk_dir/fenced_code.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
 awk -f "$awk_dir/indented_code.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
 awk -f "$awk_dir/pipe_tables.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
-awk -f "$awk_dir/headers.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
+awk -v enable_header_links="$ENABLE_HEADER_LINKS" -f "$awk_dir/headers.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
 awk -f "$awk_dir/lists.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
 
 # Spacing

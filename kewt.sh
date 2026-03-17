@@ -49,6 +49,7 @@ favicon = ""
 generate_page_title = true
 error_page = "not_found.html"
 versioning = false
+enable_header_links = true
 EOF
     fi
 
@@ -282,6 +283,7 @@ favicon=""
 generate_page_title="true"
 error_page="not_found.html"
 versioning="false"
+enable_header_links="true"
 
 load_config() {
     [ -f "$1" ] || return
@@ -322,6 +324,7 @@ load_config() {
             generate_page_title) generate_page_title="$val" ;;
             error_page) error_page="$val" ;;
             versioning) versioning="$val" ;;
+            enable_header_links) enable_header_links="$val" ;;
         esac
     done < "$1"
 }
@@ -435,6 +438,7 @@ copy_style_with_resolved_vars() {
 
 render_markdown() {
     file="$1"
+    is_home="$2"
     local_template=$(find_closest "template.html" "$(dirname "$file")")
     [ -z "$local_template" ] && local_template="$template"
 
@@ -485,20 +489,24 @@ render_markdown() {
 
     page_title="$title"
     if [ "$generate_page_title" = "true" ] && [ -n "$file" ] && [ -f "$file" ]; then
-        first_heading=$(grep -m 1 '^# ' "$file" | sed 's/^# *//; s/ *$//')
-        if [ -n "$first_heading" ]; then
-            first_heading=$(echo "$first_heading" | sed -e 's/\[//g' -e 's/\]//g' -e 's/!//g' -e 's/\*//g' -e 's/_//g' -e 's/`//g' -e 's/([^)]*)//g' | sed 's/\\//g')
-            page_title="$first_heading - $title"
+        if [ "$is_home" = "true" ] && [ -n "$home_name" ]; then
+            page_title="$home_name - $title"
         else
-            basename_no_ext=$(basename "$file" .md)
-            if [ "$basename_no_ext" != "index" ] && [ "$basename_no_ext" != "404_gen" ]; then
-                cap_basename=$(echo "$basename_no_ext" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')
-                page_title="$cap_basename - $title"
+            first_heading=$(grep -m 1 '^# ' "$file" | sed 's/^# *//; s/ *$//')
+            if [ -n "$first_heading" ]; then
+                first_heading=$(echo "$first_heading" | sed -e 's/\[//g' -e 's/\]//g' -e 's/!//g' -e 's/\*//g' -e 's/_//g' -e 's/`//g' -e 's/([^)]*)//g' | sed 's/\\//g')
+                page_title="$first_heading - $title"
+            else
+                basename_no_ext=$(basename "$file" .md)
+                if [ "$basename_no_ext" != "index" ] && [ "$basename_no_ext" != "404_gen" ]; then
+                    cap_basename=$(echo "$basename_no_ext" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')
+                    page_title="$cap_basename - $title"
+                fi
             fi
         fi
     fi
 
-    MARKDOWN_SITE_ROOT="$src" MARKDOWN_FALLBACK_FILE="$script_dir/styles/$style.css" sh "$script_dir/markdown.sh" "$file" | awk -v title="$page_title" -v nav="$nav" -v footer="$footer" -v style_path="${style_path}${asset_version}" -v header_brand="$header_brand" -v head_extra="$head_extra" -f "$awk_dir/render_template.awk" "$local_template"
+    ENABLE_HEADER_LINKS="$enable_header_links" MARKDOWN_SITE_ROOT="$src" MARKDOWN_FALLBACK_FILE="$script_dir/styles/$style.css" sh "$script_dir/markdown.sh" "$file" | awk -v title="$page_title" -v nav="$nav" -v footer="$footer" -v style_path="${style_path}${asset_version}" -v header_brand="$header_brand" -v head_extra="$head_extra" -f "$awk_dir/render_template.awk" "$local_template"
 }
 
 echo "Building site from '$src' to '$out'..."
@@ -523,7 +531,8 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
             md_count=$(find "$dir" ! -name "$(basename "$dir")" -prune -name "*.md" | wc -l)
             if [ "$md_count" -eq 1 ]; then
                 md_file=$(find "$dir" ! -name "$(basename "$dir")" -prune -name "*.md")
-                render_markdown "$md_file" > "$out_dir/index.html"
+                is_home="false"; [ "$dir" = "$src" ] && is_home="true"
+                render_markdown "$md_file" "$is_home" > "$out_dir/index.html"
                 continue
             fi
         fi
@@ -546,7 +555,8 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
                 echo "- [$name]($name)" >> "$temp_index"
             fi
         done
-        render_markdown "$temp_index" > "$out_dir/index.html"
+        is_home="false"; [ "$dir" = "$src" ] && is_home="true"
+        render_markdown "$temp_index" "$is_home" > "$out_dir/index.html"
         rm "$temp_index"
     fi
 done
@@ -576,8 +586,9 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type f -print" | sort | while 
     fi
 
     if [ "${file%.md}" != "$file" ] && [ "$is_preserved" -eq 0 ]; then
+        is_home="false"; [ "$file" = "$src/index.md" ] && is_home="true"
         out_file="$out/${rel_path%.md}.html"
-        render_markdown "$file" > "$out_file"
+        render_markdown "$file" "$is_home" > "$out_file"
     else
         cp "$file" "$out/$rel_path"
     fi
