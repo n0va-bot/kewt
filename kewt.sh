@@ -50,6 +50,7 @@ generate_page_title = true
 error_page = "not_found.html"
 versioning = false
 enable_header_links = true
+base_url = ""
 EOF
     fi
 
@@ -284,6 +285,7 @@ generate_page_title="true"
 error_page="not_found.html"
 versioning="false"
 enable_header_links="true"
+base_url=""
 
 load_config() {
     [ -f "$1" ] || return
@@ -325,6 +327,7 @@ load_config() {
             error_page) error_page="$val" ;;
             versioning) versioning="$val" ;;
             enable_header_links) enable_header_links="$val" ;;
+            base_url) base_url="$val" ;;
         esac
     done < "$1"
 }
@@ -601,6 +604,29 @@ if [ -n "$error_page" ] && [ ! -f "$out/$error_page" ]; then
     echo "The requested page could not be found." >> "$temp_404"
     render_markdown "$temp_404" > "$out/$error_page"
     rm -f "$temp_404"
+fi
+
+if [ -n "$base_url" ]; then
+    sitemap_file="$out/sitemap.xml"
+    base_url="${base_url%/}"
+    today=$(date +%Y-%m-%d)
+    
+    printf '<?xml version="1.0" encoding="UTF-8"?>\n' > "$sitemap_file"
+    printf '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' >> "$sitemap_file"
+    
+    find "$out" -type f -name "*.html" -print | sort | while IFS= read -r html_file; do
+        rel_url="${html_file#"$out"}"
+        
+        # Don't include 404 in the sitemap (duh)
+        [ "${rel_url#/}" = "$error_page" ] && continue
+        
+        printf '  <url>\n' >> "$sitemap_file"
+        printf '    <loc>%s%s</loc>\n' "$base_url" "$rel_url" >> "$sitemap_file"
+        printf '    <lastmod>%s</lastmod>\n' "$today" >> "$sitemap_file"
+        printf '  </url>\n' >> "$sitemap_file"
+    done
+    
+    printf '</urlset>\n' >> "$sitemap_file"
 fi
 
 echo "Build complete."
