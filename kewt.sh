@@ -12,12 +12,14 @@ Usage: $invoked_as [--from <src>] [--to <out>]
        $invoked_as [src] [out]
        $invoked_as --new [title]
        $invoked_as --update [dir]
+       $invoked_as --post
        $invoked_as --help
 
 Options:
   --help          Show this help message.
   --new [title]   Create a new site directory (default: site)
   --update [dir]  Update site.conf and template.html with latest defaults (defaults to current directory)
+  --post          Create a new empty post file in the configured posts_dir with current date and time as name
   --from <src>    Source directory (default: site)
   --to <out>      Output directory (default: out)
 EOF
@@ -53,6 +55,9 @@ error_page = "not_found.html"
 versioning = false
 enable_header_links = true
 base_url = ""
+generate_feed = false
+feed_file = "rss.xml"
+posts_dir = ""
 EOF
     fi
 
@@ -104,6 +109,33 @@ create_new_site() {
     exit 0
 }
 
+create_new_post() {
+    post_src_dir="$1"
+
+    target_dir="$post_src_dir"
+    if [ -n "$posts_dir" ]; then
+        target_dir="$post_src_dir/$posts_dir"
+    fi
+
+    mkdir -p "$target_dir"
+
+    base_filename="$(date +%Y-%m-%d-%H:%M)"
+    filename="${base_filename}.md"
+    file_path="$target_dir/$filename"
+
+    counter=1
+    while [ -e "$file_path" ]; do
+        filename="${base_filename}_${counter}.md"
+        file_path="$target_dir/$filename"
+        counter=$((counter + 1))
+    done
+
+    touch "$file_path"
+
+    echo "Created new post at '$file_path'."
+    exit 0
+}
+
 update_site() {
     update_dir="${1:-.}"
     [ -d "$update_dir" ] || die "Directory '$update_dir' does not exist."
@@ -135,9 +167,12 @@ error_page = "not_found.html"
 versioning = false
 enable_header_links = true
 base_url = ""
+generate_feed = false
+feed_file = "rss.xml"
+posts_dir = ""
 CONFEOF
 
-    # Update site.conf: add missing keys
+    # Update site.conf
     if [ ! -f "$target_conf" ]; then
         echo "No site.conf found in '$update_dir'; nothing to update."
     else
@@ -207,6 +242,8 @@ src=""
 out=""
 new_mode="false"
 new_title=""
+post_mode="false"
+post_title=""
 positional_count=0
 
 while [ $# -gt 0 ]; do
@@ -221,6 +258,9 @@ while [ $# -gt 0 ]; do
                 new_title="$2"
                 shift
             fi
+            ;;
+        --post)
+            post_mode="true"
             ;;
         --update)
             update_dir="."
@@ -368,7 +408,11 @@ rm -f "$KEWT_TMPDIR/kewt_preserve"
 
 generate_nav() {
     dinfo=$(eval "find \"$1\" \( $IGNORE_ARGS -o $HIDE_ARGS -o $PRESERVE_ARGS \) -prune -o -print" | sort | awk -v src="$1" -f "$awk_dir/collect_dir_info.awk")
-    eval "find \"$1\" \( $IGNORE_ARGS -o $HIDE_ARGS -o $PRESERVE_ARGS \) -prune -o -name \"*.md\" -print" | sort | awk -v src="$1" -v single_file_index="$single_file_index" -v flatten="$flatten" -v order="$order" -v home_name="$home_name" -v show_home_in_nav="$show_home_in_nav" -v dinfo="$dinfo" -f "$awk_dir/generate_sidebar.awk"
+    find_cmd="find \"$1\" \( $IGNORE_ARGS -o $HIDE_ARGS -o $PRESERVE_ARGS \) -prune -o -name \"*.md\" -print"
+    if [ -n "$posts_dir" ] && [ -d "$1/$posts_dir" ]; then
+        find_cmd="$find_cmd && echo \"$1/$posts_dir/index.md\""
+    fi
+    eval "$find_cmd" | sort -u | awk -v src="$1" -v single_file_index="$single_file_index" -v flatten="$flatten" -v order="$order" -v home_name="$home_name" -v show_home_in_nav="$show_home_in_nav" -v dinfo="$dinfo" -f "$awk_dir/generate_sidebar.awk"
 }
 
 title="kewt"
@@ -393,6 +437,9 @@ error_page="not_found.html"
 versioning="false"
 enable_header_links="true"
 base_url=""
+generate_feed="false"
+feed_file="rss.xml"
+posts_dir=""
 
 load_config() {
     [ -f "$1" ] || return
@@ -435,12 +482,21 @@ load_config() {
             versioning) versioning="$val" ;;
             enable_header_links) enable_header_links="$val" ;;
             base_url) base_url="$val" ;;
+            generate_feed) generate_feed="$val" ;;
+            feed_file) feed_file="$val" ;;
+            posts_dir) posts_dir="$val" ;;
         esac
     done < "$1"
 }
 
 load_config "./site.conf"
 load_config "$src/site.conf"
+
+if [ -n "$posts_dir" ]; then
+    HIDE_ARGS="$HIDE_ARGS -o -path '$src/$posts_dir/*'"
+fi
+
+[ "$post_mode" = "true" ] && create_new_post "$src"
 
 asset_version=""
 if [ "$versioning" = "true" ]; then
@@ -549,6 +605,20 @@ copy_style_with_resolved_vars() {
 render_markdown() {
     file="$1"
     is_home="$2"
+
+    content_file="$file"
+    if [ -n "$posts_dir" ] && [ "$file" != "$src/$posts_dir/index.md" ]; then
+        dir_of_file=$(dirname "$file")
+        rel_dir_of_file="${dir_of_file#"$src"}"
+        rel_dir_of_file="${rel_dir_of_file#/}"
+        if [ "$rel_dir_of_file" = "$posts_dir" ]; then
+             temp_post_with_backlink="$KEWT_TMPDIR/post_with_backlink.md"
+             printf "[< Back](index.html)\n\n" > "$temp_post_with_backlink"
+             cat "$file" >> "$temp_post_with_backlink"
+             content_file="$temp_post_with_backlink"
+        fi
+    fi
+
     local_template=$(find_closest "template.html" "$(dirname "$file")")
     [ -z "$local_template" ] && local_template="$template"
 
@@ -616,7 +686,7 @@ render_markdown() {
         fi
     fi
 
-    ENABLE_HEADER_LINKS="$enable_header_links" MARKDOWN_SITE_ROOT="$src" MARKDOWN_FALLBACK_FILE="$script_dir/styles/$style.css" sh "$script_dir/markdown.sh" "$file" | awk -v title="$page_title" -v nav="$nav" -v footer="$footer" -v style_path="${style_path}${asset_version}" -v header_brand="$header_brand" -v head_extra="$head_extra" -f "$awk_dir/render_template.awk" "$local_template"
+    ENABLE_HEADER_LINKS="$enable_header_links" MARKDOWN_SITE_ROOT="$src" MARKDOWN_FALLBACK_FILE="$script_dir/styles/$style.css" sh "$script_dir/markdown.sh" "$content_file" | awk -v title="$page_title" -v nav="$nav" -v footer="$footer" -v style_path="${style_path}${asset_version}" -v header_brand="$header_brand" -v head_extra="$head_extra" -f "$awk_dir/render_template.awk" "$local_template"
 }
 
 echo "Building site from '$src' to '$out'..."
@@ -652,7 +722,14 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
         [ -z "$display_dir" ] && display_dir="/"
         echo "# Index of $display_dir" > "$temp_index"
         echo "" >> "$temp_index"
-        find "$dir" ! -name "$(basename "$dir")" -prune ! -name ".*" -print | sort | while read -r entry; do
+
+        sort_args=""
+        # If this is the posts dir reverse
+        if [ "$rel_dir" = "$posts_dir" ] || [ "./$rel_dir" = "$posts_dir" ]; then
+            sort_args="-r"
+        fi
+
+        find "$dir" ! -name "$(basename "$dir")" -prune ! -name ".*" -print | LC_ALL=C sort $sort_args | while read -r entry; do
             name="${entry##*/}"
             case "$name" in
                 template.html|site.conf|style.css|index.md) continue ;;
@@ -660,7 +737,34 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
             if [ -d "$entry" ]; then
                 echo "- [${name}/](${name}/index.html)" >> "$temp_index"
             elif [ "${entry%.md}" != "$entry" ]; then
-                echo "- [${name%.md}](${name%.md}.html)" >> "$temp_index"
+                label="${name%.md}"
+
+                # Try to get first heading
+                post_h=$(grep -m 1 '^# ' "$entry" | sed 's/^# *//')
+                if [ -n "$post_h" ]; then
+                    post_h=$(echo "$post_h" | sed -e 's/\[//g' -e 's/\]//g' -e 's/!//g' -e 's/\*//g' -e 's/_//g' -e 's/`//g' -e 's/([^)]*)//g' | sed 's/\\//g')
+
+                    if [ "$rel_dir" = "$posts_dir" ] || [ "./$rel_dir" = "$posts_dir" ]; then
+                        # For posts add date and time
+                        p_date=$(echo "${name%.md}" | sed 's/^\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\).*/\1/')
+                        p_time="00:00"
+                        if echo "${name%.md}" | grep -q '^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}-[0-9]\{2\}[:\-][0-9]\{2\}'; then
+                             p_time=$(echo "${name%.md}" | sed 's/^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}-\([0-9]\{2\}[:\-][0-9]\{2\}\).*/\1/' | tr '-' ':')
+                        fi
+                        label="$post_h - $p_date $p_time"
+                    else
+                        label="$post_h"
+                    fi
+                elif [ "$rel_dir" = "$posts_dir" ] || [ "./$rel_dir" = "$posts_dir" ]; then
+                    # No heading and date and time for posts
+                    p_date=$(echo "${name%.md}" | sed 's/^\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\).*/\1/')
+                    p_time="00:00"
+                    if echo "${name%.md}" | grep -q '^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}-[0-9]\{2\}[:\-][0-9]\{2\}'; then
+                         p_time=$(echo "${name%.md}" | sed 's/^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}-\([0-9]\{2\}[:\-][0-9]\{2\}\).*/\1/' | tr '-' ':')
+                    fi
+                    label="$p_date $p_time"
+                fi
+                echo "- [$label](${name%.md}.html)" >> "$temp_index"
             else
                 echo "- [$name]($name)" >> "$temp_index"
             fi
@@ -717,23 +821,87 @@ if [ -n "$base_url" ]; then
     sitemap_file="$out/sitemap.xml"
     base_url="${base_url%/}"
     today=$(date +%Y-%m-%d)
-    
+
     printf '<?xml version="1.0" encoding="UTF-8"?>\n' > "$sitemap_file"
     printf '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' >> "$sitemap_file"
-    
+
     find "$out" -type f -name "*.html" -print | sort | while IFS= read -r html_file; do
         rel_url="${html_file#"$out"}"
-        
+
         # Don't include 404 in the sitemap (duh)
         [ "${rel_url#/}" = "$error_page" ] && continue
-        
+
         printf '  <url>\n' >> "$sitemap_file"
         printf '    <loc>%s%s</loc>\n' "$base_url" "$rel_url" >> "$sitemap_file"
         printf '    <lastmod>%s</lastmod>\n' "$today" >> "$sitemap_file"
         printf '  </url>\n' >> "$sitemap_file"
     done
-    
+
     printf '</urlset>\n' >> "$sitemap_file"
+fi
+
+if [ "$generate_feed" = "true" ] && [ -n "$base_url" ]; then
+    feed_path="$out/$feed_file"
+    base_url_feed="${base_url%/}"
+    build_date=$(date -u '+%a, %d %b %Y %H:%M:%S +0000')
+
+    printf '<?xml version="1.0" encoding="UTF-8"?>\n' > "$feed_path"
+    printf '<rss version="2.0">\n' >> "$feed_path"
+    printf '  <channel>\n' >> "$feed_path"
+    printf '    <title>%s</title>\n' "$title" >> "$feed_path"
+    printf '    <link>%s</link>\n' "$base_url_feed" >> "$feed_path"
+    printf '    <description>%s</description>\n' "$title" >> "$feed_path"
+    printf '    <lastBuildDate>%s</lastBuildDate>\n' "$build_date" >> "$feed_path"
+
+    find "$src" -type f -name '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]*.md' -print | LC_ALL=C sort -r | while IFS= read -r post_file; do
+        post_basename=$(basename "$post_file" .md)
+        # Extract YYYY-MM-DD
+        post_date=$(echo "$post_basename" | sed 's/^\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\).*/\1/')
+
+        # Extract HH:MM if present (e.g., 2026-03-17-10:30 or 2026-03-17-10:30_1)
+        post_time="00:00"
+        if echo "$post_basename" | grep -q '^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}-[0-9]\{2\}[:\-][0-9]\{2\}'; then
+            post_time=$(echo "$post_basename" | sed 's/^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}-\([0-9]\{2\}[:\-][0-9]\{2\}\).*/\1/' | tr '-' ':')
+        fi
+
+        post_slug=$(echo "$post_basename" | sed -e 's/^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}-[0-9]\{2\}[:\-][0-9]\{2\}//' -e 's/^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}//' -e 's/^[_\-]//')
+
+        post_heading=$(grep -m 1 '^# ' "$post_file" | sed 's/^# *//')
+        if [ -z "$post_heading" ]; then
+            if [ -n "$post_slug" ] && ! echo "$post_slug" | grep -q '^[0-9]\+$'; then
+                post_heading=$(echo "$post_slug" | sed 's/-/ /g' | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2)}1')
+            else
+                post_heading="Post"
+            fi
+        fi
+        post_heading=$(echo "$post_heading" | sed -e 's/\[//g' -e 's/\]//g' -e 's/!//g' -e 's/\*//g' -e 's/_//g' -e 's/`//g' -e 's/([^)]*)//g' | sed 's/\\//g')
+        post_title="$post_heading - $post_date $post_time"
+
+        rel_path="${post_file#"$src"}"
+        rel_path="${rel_path#/}"
+        post_url="$base_url_feed/${rel_path%.md}.html"
+
+        pub_year=$(echo "$post_date" | cut -d- -f1)
+        pub_month=$(echo "$post_date" | cut -d- -f2)
+        pub_day=$(echo "$post_date" | cut -d- -f3)
+        case "$pub_month" in
+            01) pub_mon="Jan" ;; 02) pub_mon="Feb" ;; 03) pub_mon="Mar" ;;
+            04) pub_mon="Apr" ;; 05) pub_mon="May" ;; 06) pub_mon="Jun" ;;
+            07) pub_mon="Jul" ;; 08) pub_mon="Aug" ;; 09) pub_mon="Sep" ;;
+            10) pub_mon="Oct" ;; 11) pub_mon="Nov" ;; 12) pub_mon="Dec" ;;
+        esac
+        pub_date="${pub_day} ${pub_mon} ${pub_year} ${post_time}:00 +0000"
+
+        printf '    <item>\n' >> "$feed_path"
+        printf '      <title>%s</title>\n' "$post_title" >> "$feed_path"
+        printf '      <link>%s</link>\n' "$post_url" >> "$feed_path"
+        printf '      <guid>%s</guid>\n' "$post_url" >> "$feed_path"
+        printf '      <pubDate>%s</pubDate>\n' "$pub_date" >> "$feed_path"
+        printf '    </item>\n' >> "$feed_path"
+    done
+
+    printf '  </channel>\n' >> "$feed_path"
+    printf '</rss>\n' >> "$feed_path"
 fi
 
 echo "Build complete."
