@@ -816,7 +816,12 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type f -print" | sort | while 
         is_preserved=1
     fi
 
-    if [ "$single_file_index" = "true" ] && [ "${file%.md}" != "$file" ] && [ "$is_preserved" -eq 0 ] && [ ! -f "$(dirname "$file")/index.md" ]; then
+    is_posts_dir_2="false"
+    if [ -n "$posts_dir" ] && { [ "$dir_rel" = "$posts_dir" ] || [ "./$dir_rel" = "$posts_dir" ]; }; then
+        is_posts_dir_2="true"
+    fi
+
+    if [ "$single_file_index" = "true" ] && [ "${file%.md}" != "$file" ] && [ "$is_preserved" -eq 0 ] && [ ! -f "$(dirname "$file")/index.md" ] && [ "$is_posts_dir_2" = "false" ]; then
         md_count=$(find "$(dirname "$file")" ! -name "$(basename "$(dirname "$file")")" -prune -name "*.md" | wc -l)
         [ "$md_count" -eq 1 ] && continue
     fi
