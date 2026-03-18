@@ -62,7 +62,7 @@ home_name = "Home"
 show_home_in_nav = true
 nav_links = ""
 nav_extra = ""
-footer = "made with <a href="https://kewt.krzak.org">kewt</a>"
+footer = "made with <a href=\"https://kewt.krzak.org\">kewt</a>"
 logo = ""
 display_logo = false
 display_title = true

@@ -44,7 +44,7 @@ home_name = "Home"
 show_home_in_nav = true
 nav_links = ""
 nav_extra = ""
-footer = "made with <a href="https://kewt.krzak.org">kewt</a>"
+footer = "made with <a href=\"https://kewt.krzak.org\">kewt</a>"
 logo = ""
 display_logo = false
 display_title = true
@@ -156,7 +156,7 @@ home_name = "Home"
 show_home_in_nav = true
 nav_links = ""
 nav_extra = ""
-footer = "made with <a href="https://kewt.krzak.org">kewt</a>"
+footer = "made with <a href=\"https://kewt.krzak.org\">kewt</a>"
 logo = ""
 display_logo = false
 display_title = true
@@ -456,8 +456,14 @@ load_config() {
         key=$(printf '%s' "$key" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
         val=$(printf '%s' "$val" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
         case "$val" in
-            \"*\") val=${val#\"}; val=${val%\"} ;;
-            \'*\') val=${val#\'}; val=${val%\'} ;;
+            \"*\")
+                val=${val#\"}; val=${val%\"}
+                val=$(printf '%s' "$val" | sed 's/\\"/\"/g; s/\\\\/\\/g')
+                ;;
+            \'*\')
+                val=${val#\'}; val=${val%\'}
+                val=$(printf '%s' "$val" | sed "s/\\\\'/'/g; s/\\\\/\\/g")
+                ;;
         esac
 
         case "$key" in
