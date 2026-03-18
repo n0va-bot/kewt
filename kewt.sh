@@ -13,6 +13,7 @@ Usage: $invoked_as [--from <src>] [--to <out>]
        $invoked_as --new [title]
        $invoked_as --update [dir]
        $invoked_as --post
+       $invoked_as --version
        $invoked_as --help
 
 Options:
@@ -20,6 +21,7 @@ Options:
   --new [title]   Create a new site directory (default: site)
   --update [dir]  Update site.conf and template.html with latest defaults (defaults to current directory)
   --post          Create a new empty post file in the configured posts_dir with current date and time as name
+  --version       Show version information.
   --from <src>    Source directory (default: site)
   --to <out>      Output directory (default: out)
 EOF
@@ -259,6 +261,10 @@ while [ $# -gt 0 ]; do
                 shift
             fi
             ;;
+        --version|-v)
+            echo "kewt version git"
+            exit 0
+            ;;
         --post)
             post_mode="true"
             ;;
@@ -301,7 +307,13 @@ done
 
 ensure_root_defaults
 
-[ -z "$src" ] && src="site"
+if [ -z "$src" ]; then
+    if [ "$post_mode" = "true" ] && [ -f "./site.conf" ]; then
+        src="."
+    else
+        src="site"
+    fi
+fi
 [ -z "$out" ] && out="out"
 
 src="${src%/}"
@@ -713,7 +725,11 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
     [ "$dir_indexes" != "true" ] && continue
 
     if [ ! -f "$dir/index.md" ]; then
-        if [ "$single_file_index" = "true" ]; then
+        is_posts_dir="false"
+        if [ -n "$posts_dir" ] && { [ "$rel_dir" = "$posts_dir" ] || [ "./$rel_dir" = "$posts_dir" ]; }; then
+            is_posts_dir="true"
+        fi
+        if [ "$single_file_index" = "true" ] && [ "$is_posts_dir" = "false" ]; then
             md_count=$(find "$dir" ! -name "$(basename "$dir")" -prune -name "*.md" | wc -l)
             if [ "$md_count" -eq 1 ]; then
                 md_file=$(find "$dir" ! -name "$(basename "$dir")" -prune -name "*.md")

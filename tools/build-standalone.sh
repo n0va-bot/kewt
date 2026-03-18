@@ -26,7 +26,13 @@ exit $?
 #==PAYLOAD==
 EOF
 
-tar -cz -C "$REPO_ROOT" kewt.sh markdown.sh awk styles >> "$OUT_FILE"
+VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "standalone")
+tmpbuild=$(mktemp -d)
+cp -r "$REPO_ROOT/kewt.sh" "$REPO_ROOT/markdown.sh" "$REPO_ROOT/awk" "$REPO_ROOT/styles" "$tmpbuild/"
+sed -e "s/kewt version git/kewt version $VERSION/" "$tmpbuild/kewt.sh" > "$tmpbuild/kewt.sh.tmp" && mv "$tmpbuild/kewt.sh.tmp" "$tmpbuild/kewt.sh"
+chmod +x "$tmpbuild/kewt.sh" "$tmpbuild/markdown.sh"
+tar -cz -C "$tmpbuild" kewt.sh markdown.sh awk styles >> "$OUT_FILE"
+rm -rf "$tmpbuild"
 
 chmod +x "$OUT_FILE"
 
