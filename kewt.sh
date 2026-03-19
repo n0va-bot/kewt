@@ -121,7 +121,7 @@ create_new_post() {
 
     mkdir -p "$target_dir"
 
-    base_filename="$(date +%Y-%m-%d-%H:%M)"
+    base_filename="$(date +%Y-%m-%d-%H-%M)"
     filename="${base_filename}.md"
     file_path="$target_dir/$filename"
 
