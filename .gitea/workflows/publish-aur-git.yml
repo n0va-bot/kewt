@@ -2,6 +2,8 @@ name: Publish kewt-git to AUR
 
 on:
   push:
+    branches:
+      - main
     paths:
       - 'packaging/AUR/PKGBUILD.git'
       - 'packaging/AUR/.SRCINFO.git'
