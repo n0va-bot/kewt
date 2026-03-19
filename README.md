@@ -1,4 +1,4 @@
-# _kewt_
+# ![kewt](/icon.svg)
 ### Pronounced "cute"
 
 ***
