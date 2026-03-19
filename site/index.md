@@ -22,6 +22,11 @@ It's meant to be a static site generator, like _[kew](https://github.com/uint23/
 - Admonition support (that's what the blocks like the warning block below are called)
 - RSS/Feed generation and Sitemap support
 - Post creation via `--post`
+- Automatic 404 page generation
+- `?v=n` support for cache busting
+- Code block classes for use with external libraries like highlight.js or prism.js (both tested)
+- Clickable markdown header anchors
+- Mobile responsive layout
 
 If you want to **force** a file to be inlined, use `\!![]` instead of `\![]`
 
@@ -43,6 +48,7 @@ On Arch Linux, _kewt_ is available on the AUR:
 
 ```sh
 ./kewt.sh --help
+./kewt.sh --version
 ./kewt.sh --new [title]
 ./kewt.sh --post
 ./kewt.sh --from <src> --to <out>
@@ -79,6 +85,7 @@ base_url = ""
 generate_feed = false
 feed_file = "rss.xml"
 posts_dir = ""
+enable_header_links = true
 ```
 
 - `title` site title
@@ -104,6 +111,7 @@ posts_dir = ""
 - `generate_feed` enable RSS feed generation (requires `base_url`)
 - `feed_file` filename for the generated RSS feed (default: "rss.xml")
 - `posts_dir` directory name containing posts (e.g., "posts"). Enables reverse-chronological sorting, title headings in indexes, and automatic backlinks.
+- `enable_header_links` turns markdown section headings into clickable anchor links (default: true)
 
 ## Ignores
 

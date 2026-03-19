@@ -69,6 +69,7 @@ EOF
 <html>
     <head>
         <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>{{TITLE}}</title>
 
         <link rel="stylesheet" href="{{CSS}}" type="text/css" />
@@ -207,6 +208,7 @@ CONFEOF
 <html>
     <head>
         <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>{{TITLE}}</title>
 
         <link rel="stylesheet" href="{{CSS}}" type="text/css" />
@@ -623,6 +625,15 @@ copy_style_with_resolved_vars() {
 render_markdown() {
     file="$1"
     is_home="$2"
+    url_override="$3"
+
+    if [ -n "$url_override" ]; then
+        current_url="$url_override"
+    else
+        rel_path="${file#"$src"}"
+        rel_path="${rel_path#/}"
+        current_url="/${rel_path%.md}.html"
+    fi
 
     content_file="$file"
     if [ -n "$posts_dir" ] && [ "$file" != "$src/$posts_dir/index.md" ]; then
@@ -704,7 +715,7 @@ render_markdown() {
         fi
     fi
 
-    ENABLE_HEADER_LINKS="$enable_header_links" MARKDOWN_SITE_ROOT="$src" MARKDOWN_FALLBACK_FILE="$script_dir/styles/$style.css" sh "$script_dir/markdown.sh" "$content_file" | awk -v title="$page_title" -v nav="$nav" -v footer="$footer" -v style_path="${style_path}${asset_version}" -v header_brand="$header_brand" -v head_extra="$head_extra" -f "$awk_dir/render_template.awk" "$local_template"
+    ENABLE_HEADER_LINKS="$enable_header_links" MARKDOWN_SITE_ROOT="$src" MARKDOWN_FALLBACK_FILE="$script_dir/styles/$style.css" sh "$script_dir/markdown.sh" "$content_file" | awk -v current_url="$current_url" -v title="$page_title" -v nav="$nav" -v footer="$footer" -v style_path="${style_path}${asset_version}" -v header_brand="$header_brand" -v head_extra="$head_extra" -f "$awk_dir/render_template.awk" "$local_template"
 }
 
 echo "Building site from '$src' to '$out'..."
@@ -734,7 +745,9 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
             if [ "$md_count" -eq 1 ]; then
                 md_file=$(find "$dir" ! -name "$(basename "$dir")" -prune -name "*.md")
                 is_home="false"; [ "$dir" = "$src" ] && is_home="true"
-                render_markdown "$md_file" "$is_home" > "$out_dir/index.html"
+                target_url="/$rel_dir/index.html"
+                [ "$rel_dir" = "." ] && target_url="/index.html"
+                render_markdown "$md_file" "$is_home" "$target_url" > "$out_dir/index.html"
                 continue
             fi
         fi
@@ -792,7 +805,9 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
             fi
         done
         is_home="false"; [ "$dir" = "$src" ] && is_home="true"
-        render_markdown "$temp_index" "$is_home" > "$out_dir/index.html"
+        target_url="/$rel_dir/index.html"
+        [ "$rel_dir" = "." ] && target_url="/index.html"
+        render_markdown "$temp_index" "$is_home" "$target_url" > "$out_dir/index.html"
         rm "$temp_index"
     fi
 done
@@ -840,7 +855,7 @@ if [ -n "$error_page" ] && [ ! -f "$out/$error_page" ]; then
     echo "# 404 - Not Found" > "$temp_404"
     echo "" >> "$temp_404"
     echo "The requested page could not be found." >> "$temp_404"
-    render_markdown "$temp_404" > "$out/$error_page"
+    render_markdown "$temp_404" "false" "/$error_page" > "$out/$error_page"
     rm -f "$temp_404"
 fi
 

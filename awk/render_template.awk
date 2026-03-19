@@ -1,9 +1,17 @@
-function replace_all(text, token, value, pos, token_len) {
+function replace_all(text, token, value, pos, token_len, res) {
     token_len = length(token)
+    res = ""
     while ((pos = index(text, token)) > 0) {
-        text = substr(text, 1, pos - 1) value substr(text, pos + token_len)
+        res = res substr(text, 1, pos - 1) value
+        text = substr(text, pos + token_len)
     }
-    return text
+    return res text
+}
+
+BEGIN {
+    if (current_url != "") {
+        nav = replace_all(nav, "href=\"" current_url "\"", "href=\"" current_url "\" class=\"current-page\"")
+    }
 }
 
 {
