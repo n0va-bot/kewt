@@ -1,7 +1,11 @@
 # _kewt_
 ### Pronounced "cute"
 
+***
+
 # [Go to the repo](https://git.krzak.org/N0VA/kewt)
+
+***
 
 _kewt_ is a minimalist ssg inspired by _[werc](http://werc.cat-v.org/)_ and _[kew](https://github.com/uint23/kew)_
 
@@ -119,7 +123,7 @@ posts_dir = ""
 
 ## Credits
 
-- Default css style and html template based on _[kew](https://github.com/uint23/kew)_ by [uint23](https://github.com/uint23)
+- _kew_ css style adapted from _[kew](https://github.com/uint23/kew)_ by [uint23](https://github.com/uint23)
 
 >[!WARNING]
->Most of this was coded at night, while sleepy and a bit sick, and after walking for about 4 hours around a forest, so...
+>The base that all of this is built upon was coded at night, while sleepy and a bit sick, and after walking for about 4 hours around a forest, so...
