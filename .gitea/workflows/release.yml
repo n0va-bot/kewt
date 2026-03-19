@@ -90,25 +90,9 @@ jobs:
               -e "s/SHA256SUM_PLACEHOLDER/${CHECKSUM}/g" \
               packaging/AUR/PKGBUILD.template > aur-work/PKGBUILD
           
-          cat > aur-work/.SRCINFO << SRCEOF
-          pkgbase = kewt-bin
-          	pkgdesc = A minimalist, 100% POSIX, static site generator inspired by werc and kew
-          	pkgver = ${VERSION}
-          	pkgrel = 1
-          	url = https://git.krzak.org/N0VA/kewt
-          	arch = any
-          	license = MIT
-          	depends = sh
-          	provides = kewt
-          	conflicts = kewt
-          	conflicts = kewt-git
-          	source = kewt-bin-${VERSION}.sh::https://git.krzak.org/N0VA/kewt/releases/download/v${VERSION}/kewt
-          	sha256sums = ${CHECKSUM}
-          
-          pkgname = kewt-bin
-          SRCEOF
-          # Remove leading whitespace from heredoc
-          sed -i 's/^          //' aur-work/.SRCINFO
+          sed -e "s/VERSION_PLACEHOLDER/${VERSION}/g" \
+              -e "s/SHA256SUM_PLACEHOLDER/${CHECKSUM}/g" \
+              packaging/AUR/.SRCINFO.template > aur-work/.SRCINFO
 
       - name: Publish to AUR
         uses: KSXGitHub/github-actions-deploy-aur@v3.0.1
