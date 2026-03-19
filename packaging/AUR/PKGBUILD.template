@@ -9,7 +9,7 @@ license=('ISC')
 depends=('sh')
 provides=('kewt')
 conflicts=('kewt' 'kewt-git')
-source=("${pkgname}-${pkgver}.sh::${url}/releases/download/v${pkgver}/kewt")
+source=("${pkgname}-${pkgver}.sh::https://git.krzak.org/N0VA/kewt/releases/download/v${pkgver}/kewt")
 sha256sums=('SHA256SUM_PLACEHOLDER')
 
 build() {
