@@ -33,6 +33,13 @@ function compare_paths(p1, p2,    parts1, parts2, n1, n2, i, name1, name2, lname
 }
 
 BEGIN {
+    src = ENVIRON["AWK_SRC"]
+    single_file_index = ENVIRON["AWK_SINGLE_FILE_INDEX"]
+    flatten = ENVIRON["AWK_FLATTEN"]
+    order = ENVIRON["AWK_ORDER"]
+    home_name = ENVIRON["AWK_HOME_NAME"]
+    show_home_in_nav = ENVIRON["AWK_SHOW_HOME_IN_NAV"]
+    dinfo = ENVIRON["AWK_DINFO"]
     n_dlines = split(dinfo, dlines, "\n")
     for (i = 1; i <= n_dlines; i++) {
         if (split(dlines[i], dparts, "|") == 3) {

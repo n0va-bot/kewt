@@ -1,4 +1,5 @@
 BEGIN {
+    src = ENVIRON["AWK_SRC"]
     slen = length(src)
 }
 

@@ -105,7 +105,7 @@ create_new_site() {
     printf "# _kewt_ website\n" > "$new_dir/index.md"
 
     if [ -n "$new_title" ]; then
-        awk -v new_title="$new_title" -f "$awk_dir/update_site_conf.awk" "$new_dir/site.conf" > "$new_dir/site.conf.tmp" && mv "$new_dir/site.conf.tmp" "$new_dir/site.conf"
+        AWK_NEW_TITLE="$new_title" awk -f "$awk_dir/update_site_conf.awk" "$new_dir/site.conf" > "$new_dir/site.conf.tmp" && mv "$new_dir/site.conf.tmp" "$new_dir/site.conf"
     fi
 
     echo "Created new site at '$new_dir'."
@@ -421,12 +421,12 @@ done < "$KEWT_TMPDIR/kewt_preserve"
 rm -f "$KEWT_TMPDIR/kewt_preserve"
 
 generate_nav() {
-    dinfo=$(eval "find \"$1\" \( $IGNORE_ARGS -o $HIDE_ARGS -o $PRESERVE_ARGS \) -prune -o -print" | sort | awk -v src="$1" -f "$awk_dir/collect_dir_info.awk")
+    dinfo=$(eval "find \"$1\" \( $IGNORE_ARGS -o $HIDE_ARGS -o $PRESERVE_ARGS \) -prune -o -print" | sort | AWK_SRC="$1" awk -f "$awk_dir/collect_dir_info.awk")
     find_cmd="find \"$1\" \( $IGNORE_ARGS -o $HIDE_ARGS -o $PRESERVE_ARGS \) -prune -o -name \"*.md\" -print"
     if [ -n "$posts_dir" ] && [ -d "$1/$posts_dir" ]; then
         find_cmd="$find_cmd && echo \"$1/$posts_dir/index.md\""
     fi
-    eval "$find_cmd" | sort -u | awk -v src="$1" -v single_file_index="$single_file_index" -v flatten="$flatten" -v order="$order" -v home_name="$home_name" -v show_home_in_nav="$show_home_in_nav" -v dinfo="$dinfo" -f "$awk_dir/generate_sidebar.awk"
+    eval "$find_cmd" | sort -u | AWK_SRC="$1" AWK_SINGLE_FILE_INDEX="$single_file_index" AWK_FLATTEN="$flatten" AWK_ORDER="$order" AWK_HOME_NAME="$home_name" AWK_SHOW_HOME_IN_NAV="$show_home_in_nav" AWK_DINFO="$dinfo" awk -f "$awk_dir/generate_sidebar.awk"
 }
 
 title="kewt"
@@ -482,7 +482,7 @@ load_config() {
 
         case "$key" in
             title) title="$val" ;;
-            style) style="$val" ;;
+            style) style="${val#/}" ;;
             dir_indexes) dir_indexes="$val" ;;
             single_file_index) single_file_index="$val" ;;
             flatten) flatten="$val" ;;
@@ -492,19 +492,19 @@ load_config() {
             nav_links) nav_links="$val" ;;
             nav_extra) nav_extra="$val" ;;
             footer) footer="$val" ;;
-            logo) logo="$val" ;;
+            logo) logo="${val#/}" ;;
             display_logo) display_logo="$val" ;;
             display_title) display_title="$val" ;;
             logo_as_favicon) logo_as_favicon="$val" ;;
-            favicon) favicon="$val" ;;
+            favicon) favicon="${val#/}" ;;
             generate_page_title) generate_page_title="$val" ;;
-            error_page) error_page="$val" ;;
+            error_page) error_page="${val#/}" ;;
             versioning) versioning="$val" ;;
             enable_header_links) enable_header_links="$val" ;;
             base_url) base_url="$val" ;;
             generate_feed) generate_feed="$val" ;;
-            feed_file) feed_file="$val" ;;
-            posts_dir) posts_dir="$val" ;;
+            feed_file) feed_file="${val#/}" ;;
+            posts_dir) posts_dir="${val#/}" ;;
         esac
     done < "$1"
 }
@@ -715,7 +715,7 @@ render_markdown() {
         fi
     fi
 
-    ENABLE_HEADER_LINKS="$enable_header_links" MARKDOWN_SITE_ROOT="$src" MARKDOWN_FALLBACK_FILE="$script_dir/styles/$style.css" sh "$script_dir/markdown.sh" "$content_file" | awk -v current_url="$current_url" -v title="$page_title" -v nav="$nav" -v footer="$footer" -v style_path="${style_path}${asset_version}" -v header_brand="$header_brand" -v head_extra="$head_extra" -f "$awk_dir/render_template.awk" "$local_template"
+    ENABLE_HEADER_LINKS="$enable_header_links" MARKDOWN_SITE_ROOT="$src" MARKDOWN_FALLBACK_FILE="$script_dir/styles/$style.css" sh "$script_dir/markdown.sh" "$content_file" | AWK_CURRENT_URL="$current_url" AWK_TITLE="$page_title" AWK_NAV="$nav" AWK_FOOTER="$footer" AWK_STYLE_PATH="${style_path}${asset_version}" AWK_HEADER_BRAND="$header_brand" AWK_HEAD_EXTRA="$head_extra" awk -f "$awk_dir/render_template.awk" "$local_template"
 }
 
 echo "Building site from '$src' to '$out'..."
