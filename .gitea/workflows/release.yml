@@ -32,12 +32,24 @@ jobs:
         run: |
           TAG="${GITHUB_REF#refs/tags/}"
           
+          # Fetch release body from Gitea
+          RELEASE_BODY=$(curl -sL \
+            "https://git.krzak.org/api/v1/repos/N0VA/kewt/releases/tags/${TAG}" \
+            | jq -r '.body // ""')
+          
+          # Build JSON payload
+          PAYLOAD=$(jq -n \
+            --arg tag "$TAG" \
+            --arg name "Release $TAG" \
+            --arg body "$RELEASE_BODY" \
+            '{tag_name: $tag, name: $name, body: $body, draft: false, prerelease: false}')
+          
           # Create the release on GitHub
           curl -sL -X POST \
             -H "Authorization: token ${{ secrets.GH_RELEASE_TOKEN }}" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/n0va-bot/kewt/releases" \
-            -d "{\"tag_name\":\"${TAG}\",\"name\":\"${TAG}\",\"draft\":false,\"prerelease\":false}" || true
+            -d "$PAYLOAD" || true
           
           # Get the release ID
           RELEASE_ID=$(curl -sL \
