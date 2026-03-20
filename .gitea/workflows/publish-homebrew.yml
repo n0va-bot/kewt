@@ -1,0 +1,68 @@
+name: Publish Homebrew Tap
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  publish-homebrew:
+    runs-on: local
+    needs: []
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Wait for release asset
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG#v}"
+          ASSET_URL="https://github.com/n0va-bot/kewt/releases/download/${TAG}/kewt"
+
+          # Wait for the GitHub release asset to be available
+          for i in $(seq 1 12); do
+            if curl -sLf -o /dev/null "$ASSET_URL" 2>/dev/null; then
+              echo "Asset available at $ASSET_URL"
+              break
+            fi
+            echo "Waiting for release asset... (attempt $i)"
+            sleep 10
+          done
+
+      - name: Render Formula
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG#v}"
+          ASSET_URL="https://github.com/n0va-bot/kewt/releases/download/${TAG}/kewt"
+
+          curl -sL -o kewt-binary "$ASSET_URL"
+          CHECKSUM=$(sha256sum kewt-binary | awk '{print $1}')
+          rm -f kewt-binary
+
+          mkdir -p brew-work/Formula
+          sed -e "s/VERSION_PLACEHOLDER/${VERSION}/g" \
+              -e "s/SHA256SUM_PLACEHOLDER/${CHECKSUM}/g" \
+              packaging/homebrew/kewt.rb.template > brew-work/Formula/kewt.rb
+
+          echo "Generated Formula:"
+          cat brew-work/Formula/kewt.rb
+
+      - name: Push to GitHub homebrew-tap
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          cd brew-work
+
+          git init
+          git remote add origin https://x-access-token:${{ secrets.GH_RELEASE_TOKEN }}@github.com/n0va-bot/homebrew-tap.git
+          git fetch origin main || git checkout --orphan main
+          git checkout main 2>/dev/null || git checkout --orphan main
+
+          # Overwrite with the rendered Formula
+          mkdir -p Formula
+          cp Formula/kewt.rb Formula/kewt.rb
+
+          git add Formula/kewt.rb
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git commit -m "Update kewt to ${TAG}" || echo "No changes to commit"
+          git push origin main

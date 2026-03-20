@@ -3,6 +3,7 @@ name: Release Standalone Builder
 on:
   release:
     types: [published]
+  workflow_dispatch:
 
 jobs:
   build:
