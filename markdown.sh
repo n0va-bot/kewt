@@ -52,7 +52,7 @@ while grep '^>' "$temp_file" >/dev/null; do
     fi
 done
 
-awk -f "$awk_dir/blockquote_to_admonition.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
+awk -v custom_admonitions="$CUSTOM_ADMONITIONS" -f "$awk_dir/blockquote_to_admonition.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
 awk -f "$awk_dir/fenced_code.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
 awk -f "$awk_dir/indented_code.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
 awk -f "$awk_dir/pipe_tables.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"

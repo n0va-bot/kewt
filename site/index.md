@@ -86,6 +86,7 @@ generate_feed = false
 feed_file = "rss.xml"
 posts_dir = ""
 enable_header_links = true
+custom_admonitions = ""
 ```
 
 - `title` site title
@@ -112,6 +113,7 @@ enable_header_links = true
 - `feed_file` filename for the generated RSS feed (default: "rss.xml")
 - `posts_dir` directory name containing posts (e.g., "posts"). Enables reverse-chronological sorting, title headings in indexes, and automatic backlinks.
 - `enable_header_links` turns markdown section headings into clickable anchor links (default: true)
+- `custom_admonitions` comma separated list of custom admonitions
 
 ## Ignores
 

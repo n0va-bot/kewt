@@ -68,8 +68,8 @@ base_url = ""
 generate_feed = false
 feed_file = "rss.xml"
 posts_dir = ""
+custom_admonitions = ""
 EOF
-    fi
 
     cat > "$new_dir/template.html" <<'EOF'
 <!doctype html>
@@ -166,6 +166,7 @@ base_url = ""
 generate_feed = false
 feed_file = "rss.xml"
 posts_dir = ""
+custom_admonitions = ""
 CONFEOF
 
     # Update site.conf
@@ -447,6 +448,7 @@ base_url=""
 generate_feed="false"
 feed_file="rss.xml"
 posts_dir=""
+custom_admonitions=""
 
 load_config() {
     [ -f "$1" ] || return
@@ -498,6 +500,7 @@ load_config() {
             generate_feed) generate_feed="$val" ;;
             feed_file) feed_file="${val#/}" ;;
             posts_dir) posts_dir="${val#/}" ;;
+            custom_admonitions) custom_admonitions="$val" ;;
         esac
     done < "$1"
 }
@@ -760,11 +763,11 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
 
     if [ -f "$dir/styles.css" ]; then
         if needs_rebuild "$dir/styles.css" "$out_dir/styles.css"; then
-        copy_style_with_resolved_vars "$dir/styles.css" "$out_dir/styles.css"
+            copy_style_with_resolved_vars "$dir/styles.css" "$out_dir/styles.css"
         fi
     elif [ -f "$dir/style.css" ]; then
         if needs_rebuild "$dir/style.css" "$out_dir/styles.css"; then
-        copy_style_with_resolved_vars "$dir/style.css" "$out_dir/styles.css"
+            copy_style_with_resolved_vars "$dir/style.css" "$out_dir/styles.css"
         fi
     fi
 
@@ -783,7 +786,7 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
                 target_url="/$rel_dir/index.html"
                 [ "$rel_dir" = "." ] && target_url="/index.html"
                 if needs_rebuild "$md_file" "$out_dir/index.html"; then
-                render_markdown "$md_file" "$is_home" "$target_url" > "$out_dir/index.html"
+                    render_markdown "$md_file" "$is_home" "$target_url" > "$out_dir/index.html"
                 fi
                 continue
             fi
@@ -845,7 +848,7 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
         target_url="/$rel_dir/index.html"
         [ "$rel_dir" = "." ] && target_url="/index.html"
         if needs_rebuild "$dir" "$out_dir/index.html"; then
-        render_markdown "$temp_index" "$is_home" "$target_url" > "$out_dir/index.html"
+            render_markdown "$temp_index" "$is_home" "$target_url" > "$out_dir/index.html"
         fi
         rm "$temp_index"
     fi
@@ -884,11 +887,11 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type f -print" | sort | while 
         is_home="false"; [ "$file" = "$src/index.md" ] && is_home="true"
         out_file="$out/${rel_path%.md}.html"
         if needs_rebuild "$file" "$out_file"; then
-        render_markdown "$file" "$is_home" > "$out_file"
+            render_markdown "$file" "$is_home" > "$out_file"
         fi
     else
         if needs_rebuild "$file" "$out/$rel_path"; then
-        cp "$file" "$out/$rel_path"
+            cp "$file" "$out/$rel_path"
         fi
     fi
 done
