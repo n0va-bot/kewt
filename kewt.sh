@@ -734,7 +734,19 @@ render_markdown() {
         fi
     fi
 
-    ENABLE_HEADER_LINKS="$enable_header_links" MARKDOWN_SITE_ROOT="$src" MARKDOWN_FALLBACK_FILE="$script_dir/styles/$style.css" sh "$script_dir/markdown.sh" "$content_file" | AWK_CURRENT_URL="$current_url" AWK_TITLE="$page_title" AWK_NAV="$nav" AWK_FOOTER="$footer" AWK_STYLE_PATH="${style_path}${asset_version}" AWK_HEADER_BRAND="$header_brand" AWK_HEAD_EXTRA="$head_extra" awk -f "$awk_dir/render_template.awk" "$local_template"
+    ENABLE_HEADER_LINKS="$enable_header_links" CUSTOM_ADMONITIONS="$custom_admonitions" MARKDOWN_SITE_ROOT="$src" MARKDOWN_FALLBACK_FILE="$script_dir/styles/$style.css" sh "$script_dir/markdown.sh" "$content_file" | AWK_CURRENT_URL="$current_url" AWK_TITLE="$page_title" AWK_NAV="$nav" AWK_FOOTER="$footer" AWK_STYLE_PATH="${style_path}${asset_version}" AWK_HEADER_BRAND="$header_brand" AWK_HEAD_EXTRA="$head_extra" awk -f "$awk_dir/render_template.awk" "$local_template"
+}
+
+needs_rebuild() {
+    src_file="$1"
+    out_file="$2"
+    [ ! -f "$out_file" ] && return 0
+    [ "$src_file" -nt "$out_file" ] && return 0
+    [ -f "./site.conf" ] && [ "./site.conf" -nt "$out_file" ] && return 0
+    [ -f "$src/site.conf" ] && [ "$src/site.conf" -nt "$out_file" ] && return 0
+    [ -f "$template" ] && [ "$template" -nt "$out_file" ] && return 0
+    [ -f "$script_dir/styles/$style.css" ] && [ "$script_dir/styles/$style.css" -nt "$out_file" ] && return 0
+    return 1
 }
 
 echo "Building site from '$src' to '$out'..."
@@ -747,9 +759,13 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
     mkdir -p "$out_dir"
 
     if [ -f "$dir/styles.css" ]; then
+        if needs_rebuild "$dir/styles.css" "$out_dir/styles.css"; then
         copy_style_with_resolved_vars "$dir/styles.css" "$out_dir/styles.css"
+        fi
     elif [ -f "$dir/style.css" ]; then
+        if needs_rebuild "$dir/style.css" "$out_dir/styles.css"; then
         copy_style_with_resolved_vars "$dir/style.css" "$out_dir/styles.css"
+        fi
     fi
 
     [ "$dir_indexes" != "true" ] && continue
@@ -766,7 +782,9 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
                 is_home="false"; [ "$dir" = "$src" ] && is_home="true"
                 target_url="/$rel_dir/index.html"
                 [ "$rel_dir" = "." ] && target_url="/index.html"
+                if needs_rebuild "$md_file" "$out_dir/index.html"; then
                 render_markdown "$md_file" "$is_home" "$target_url" > "$out_dir/index.html"
+                fi
                 continue
             fi
         fi
@@ -826,7 +844,9 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
         is_home="false"; [ "$dir" = "$src" ] && is_home="true"
         target_url="/$rel_dir/index.html"
         [ "$rel_dir" = "." ] && target_url="/index.html"
+        if needs_rebuild "$dir" "$out_dir/index.html"; then
         render_markdown "$temp_index" "$is_home" "$target_url" > "$out_dir/index.html"
+        fi
         rm "$temp_index"
     fi
 done
@@ -863,9 +883,13 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type f -print" | sort | while 
     if [ "${file%.md}" != "$file" ] && [ "$is_preserved" -eq 0 ]; then
         is_home="false"; [ "$file" = "$src/index.md" ] && is_home="true"
         out_file="$out/${rel_path%.md}.html"
+        if needs_rebuild "$file" "$out_file"; then
         render_markdown "$file" "$is_home" > "$out_file"
+        fi
     else
+        if needs_rebuild "$file" "$out/$rel_path"; then
         cp "$file" "$out/$rel_path"
+        fi
     fi
 done
 

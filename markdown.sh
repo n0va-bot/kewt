@@ -15,7 +15,7 @@ sed_inplace() {
     fi
 }
 
-temp_file="/tmp/markdown.$$.md"
+temp_file="${KEWT_TMPDIR:-/tmp}/markdown.$$.md"
 cat "$@" > "$temp_file"
 
 trap 'rm -f "$temp_file" "$temp_file.tmp"' EXIT INT TERM
@@ -40,11 +40,16 @@ done
 sed_inplace "/^\[[^\]]*\]:  */d" "$temp_file"
 
 # Blocks
-sed_inplace "s/^>!\[/> [!/g" "$temp_file"
-sed_inplace "s/^>\[!/> [!/g" "$temp_file"
 
+loop_count=0
+max_iterations=100
 while grep '^>' "$temp_file" >/dev/null; do
     awk -f "$awk_dir/blockquote.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
+    loop_count=$((loop_count + 1))
+    if [ "$loop_count" -gt "$max_iterations" ]; then
+        echo "Warning: Blockquote processing exceeded $max_iterations iterations on $1. Breaking to prevent infinite loop." >&2
+        break
+    fi
 done
 
 awk -f "$awk_dir/blockquote_to_admonition.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
