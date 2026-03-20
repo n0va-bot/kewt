@@ -1,7 +1,7 @@
 class Kewt < Formula
   desc "Minimalist static site generator inspired by werc"
   homepage "https://kewt.krzak.org"
-  url "https://github.com/n0va-bot/kewt/releases/download/VERSION_PLACEHOLDER/kewt"
+  url "https://github.com/n0va-bot/kewt/releases/download/vVERSION_PLACEHOLDER/kewt"
   sha256 "SHA256SUM_PLACEHOLDER"
   license "ISC"
   version "VERSION_PLACEHOLDER"
