@@ -26,7 +26,7 @@ exit $?
 #==PAYLOAD==
 EOF
 
-VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "standalone")
+VERSION=$(git describe --tags 2>/dev/null || echo "standalone")
 tmpbuild=$(mktemp -d)
 cp -r "$REPO_ROOT/kewt.sh" "$REPO_ROOT/markdown.sh" "$REPO_ROOT/awk" "$REPO_ROOT/styles" "$tmpbuild/"
 sed -e "s/kewt version git/kewt version $VERSION/" "$tmpbuild/kewt.sh" > "$tmpbuild/kewt.sh.tmp" && mv "$tmpbuild/kewt.sh.tmp" "$tmpbuild/kewt.sh"
