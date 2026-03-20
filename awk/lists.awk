@@ -48,7 +48,26 @@ BEGIN {
             }
         }
 
-        print "<li>" content "</li>"
+        has_checkbox = 0
+        if (content ~ /^\[[ \t]\] /) {
+            has_checkbox = 1
+            is_checked = 0
+            sub(/^\[[ \t]\] /, "", content)
+        } else if (content ~ /^\[[xX]\] /) {
+            has_checkbox = 1
+            is_checked = 1
+            sub(/^\[[xX]\] /, "", content)
+        }
+
+        if (has_checkbox) {
+            if (is_checked) {
+                print "<li class=\"task-list-item\"><input type=\"checkbox\" class=\"task-list-item-checkbox\" checked disabled> " content "</li>"
+            } else {
+                print "<li class=\"task-list-item\"><input type=\"checkbox\" class=\"task-list-item-checkbox\" disabled> " content "</li>"
+            }
+        } else {
+            print "<li>" content "</li>"
+        }
     } else {
         while (depth > 0) {
             print "</" cur_type[depth] ">"

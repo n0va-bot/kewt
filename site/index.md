@@ -19,7 +19,8 @@ It's meant to be a static site generator, like _[kew](https://github.com/uint23/
 - Automatic inlining and embedding of many filetypes with `\![link]` or `\![alt](link)`
 - Inline html support
 - MFM `$font` and `\<plain>` tags
-- Admonition support (that's what the blocks like the warning block below are called)
+- GFM Admonition support (that's what the blocks like the warning block below are called)
+- Task list support (`- [ ]`, `- [x]`)
 - RSS/Feed generation and Sitemap support
 - Post creation via `--post`
 - Automatic 404 page generation
