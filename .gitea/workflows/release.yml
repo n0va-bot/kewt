@@ -104,3 +104,37 @@ jobs:
           commit_email: ${{ github.actor }}@users.noreply.github.com
           ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
           commit_message: "Update kewt-bin to ${{ github.ref_name }}"
+
+  publish-homebrew:
+    runs-on: local
+    needs: build
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Render Formula and push to GitHub
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG#v}"
+
+          curl -sL -o kewt-binary \
+            "https://git.krzak.org/N0VA/kewt/releases/download/${TAG}/kewt"
+          CHECKSUM=$(sha256sum kewt-binary | awk '{print $1}')
+          rm -f kewt-binary
+
+          mkdir -p brew-work/Formula
+          sed -e "s/VERSION_PLACEHOLDER/${VERSION}/g" \
+              -e "s/SHA256SUM_PLACEHOLDER/${CHECKSUM}/g" \
+              packaging/homebrew/kewt.rb.template > brew-work/Formula/kewt.rb
+
+          cd brew-work
+          git init
+          git remote add origin https://x-access-token:${{ secrets.GH_RELEASE_TOKEN }}@github.com/n0va-bot/homebrew-tap.git
+          git fetch origin main || true
+          git checkout main 2>/dev/null || git checkout --orphan main
+
+          git add Formula/kewt.rb
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git commit -m "Update kewt to ${TAG}" || echo "No changes to commit"
+          git push origin main
