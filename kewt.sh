@@ -33,9 +33,17 @@ awk_dir="$script_dir/awk"
 KEWT_TMPDIR=$(mktemp -d "/tmp/kewt_run.XXXXXX")
 trap 'rm -rf "$KEWT_TMPDIR"' EXIT HUP INT TERM
 
-ensure_root_defaults() {
-    if [ ! -f "./site.conf" ]; then
-        cat > "./site.conf" <<'EOF'
+
+
+create_new_site() {
+    new_title="$1"
+    new_dir="site"
+    [ -n "$new_title" ] && new_dir="$new_title"
+
+    [ -e "$new_dir" ] && die "Target '$new_dir' already exists."
+
+    mkdir -p "$new_dir"
+    cat > "$new_dir/site.conf" <<'EOF'
 title = "kewt"
 style = "kewt"
 dir_indexes = true
@@ -63,8 +71,7 @@ posts_dir = ""
 EOF
     fi
 
-    if [ ! -f "./template.html" ]; then
-        cat > "./template.html" <<'EOF'
+    cat > "$new_dir/template.html" <<'EOF'
 <!doctype html>
 <html>
     <head>
@@ -88,20 +95,6 @@ EOF
     </body>
 </html>
 EOF
-    fi
-}
-
-create_new_site() {
-    new_title="$1"
-    new_dir="site"
-    [ -n "$new_title" ] && new_dir="$new_title"
-
-    [ -e "$new_dir" ] && die "Target '$new_dir' already exists."
-
-    ensure_root_defaults
-
-    mkdir -p "$new_dir"
-    cp "./site.conf" "$new_dir/site.conf"
     printf "# _kewt_ website\n" > "$new_dir/index.md"
 
     if [ -n "$new_title" ]; then
@@ -307,7 +300,7 @@ done
 
 [ "$new_mode" = "true" ] && create_new_site "$new_title"
 
-ensure_root_defaults
+
 
 if [ -z "$src" ]; then
     if [ "$post_mode" = "true" ] && [ -f "./site.conf" ]; then
@@ -584,7 +577,33 @@ nav_links_html() {
 
 template="$src/template.html"
 [ -f "$template" ] || template="./template.html"
-[ -f "$template" ] || die "Template '$template' not found."
+if [ ! -f "$template" ]; then
+    template="$KEWT_TMPDIR/default_template.html"
+    cat > "$template" <<'EOF'
+<!doctype html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>{{TITLE}}</title>
+
+        <link rel="stylesheet" href="{{CSS}}" type="text/css" />
+        {{HEAD_EXTRA}}
+    </head>
+
+    <body>
+        <header>
+            <h1>{{HEADER_BRAND}}</h1>
+        </header>
+
+        <nav id="side-bar">{{NAV}}</nav>
+
+        <article>{{CONTENT}}</article>
+        <footer>{{FOOTER}}</footer>
+    </body>
+</html>
+EOF
+fi
 
 [ -d "$out" ] && rm -rf "$out"
 mkdir -p "$out"
@@ -812,7 +831,7 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
     fi
 done
 
-if [ ! -f "$out/styles.css" ] && [ -f "$script_dir/styles/$style.css" ]; then
+if [ -f "$script_dir/styles/$style.css" ] && needs_rebuild "$script_dir/styles/$style.css" "$out/styles.css"; then
     copy_style_with_resolved_vars "$script_dir/styles/$style.css" "$out/styles.css"
 fi
 
