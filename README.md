@@ -31,7 +31,11 @@ brew install kewt
 
 ## Contributing
 
-Either through a pull request to the **home** repository ([N0VA/kewt](https://git.krzak.org/N0VA/kewt)) or by sending a patch to my email address ([n0va@krzak.org](mailto:n0va@krzak.org))
+Either through a pull request to the **home** repository ([N0VA/kewt](https://git.krzak.org/N0VA/kewt)) or by sending a patch to my email address ([n0va@krzak.org](mailto:n0va@krzak.org?subject=%5Bkewt%5D%20something)) with the subjectline being `[kewt] something`.
+
+## License
+
+ISC
 
 ## Credits
 
