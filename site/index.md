@@ -68,7 +68,6 @@ sudo make install
 - [kewt-bin](https://aur.archlinux.org/packages/kewt-bin) — prebuilt standalone binary from the latest release
 - [kewt-git](https://aur.archlinux.org/packages/kewt-git) — built from the latest git source
 
-
 #### Homebrew
 
 ```sh
