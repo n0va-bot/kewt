@@ -31,26 +31,58 @@ It's meant to be a static site generator, like _[kew](https://github.com/uint23/
 
 If you want to **force** a file to be inlined, use `\!![]` instead of `\![]`
 
+***
+
 ## Installation
 
-You can clone the repository to use `kewt.sh` directly, or you can download the standalone executable, which bundles all dependencies into a single file:
+### Standalone
 
 ```sh
 curl -L -o kewt https://git.krzak.org/N0VA/kewt/releases/download/latest/kewt
 chmod +x kewt
 ```
 
-On Arch Linux, _kewt_ is available on the AUR:
+### From source
+
+```sh
+git clone https://git.krzak.org/N0VA/kewt.git
+cd kewt
+```
+
+#### Building
+
+```sh
+make
+```
+
+#### Installing
+
+```sh
+sudo make install
+```
+
+### Package Managers
+
+#### AUR
 
 - [kewt-bin](https://aur.archlinux.org/packages/kewt-bin) — prebuilt standalone binary from the latest release
 - [kewt-git](https://aur.archlinux.org/packages/kewt-git) — built from the latest git source
 
-On macOS or Linux with Homebrew:
+
+#### Homebrew
 
 ```sh
 brew tap n0va-bot/tap
 brew install kewt
 ```
+
+#### bpkg
+
+```sh
+bpkg install n0va-bot/kewt
+```
+
+***
 
 ## Usage
 
@@ -67,7 +99,7 @@ brew install kewt
 
 `--post` creates a new empty markdown file in the configured `posts_dir` with the current date and time as the name.
 
-## site.conf
+### site.conf
 
 ```conf
 title = "kewt"
@@ -123,13 +155,13 @@ custom_admonitions = ""
 - `enable_header_links` turns markdown section headings into clickable anchor links (default: true)
 - `custom_admonitions` comma separated list of custom admonitions
 
-## Ignores
+### Ignores
 
 - `.kewtignore`: Files/directories to ignore. If empty, the whole directory gets ignored
 - `.kewthide`: Files/directories to hide from navigation but still process. Same empty rules as with ignore
 - `.kewtpreserve`: Files/directories to copy but not convert markdown to html. Same empty rules again
 
-## Embeds
+### Embeds
 
 - `\![link]`:
   - local image/audio/video files are embedded as media tags
@@ -139,9 +171,7 @@ custom_admonitions = ""
 - `\![alt](link)` works the same, with `alt` used for images
 - `\!![]` and `\!![alt](link)` force inline local file contents
 
-## Credits
-
-- _kew_ css style adapted from _[kew](https://github.com/uint23/kew)_ by [uint23](https://github.com/uint23)
+***
 
 >[!WARNING]
 >The base that all of this is built upon was coded at night, while sleepy and a bit sick, and after walking for about 4 hours around a forest, so...
