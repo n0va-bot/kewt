@@ -693,7 +693,7 @@ render_markdown() {
         if [ "$rel_dir_of_file" = "$posts_dir" ]; then
              temp_post_with_backlink="$KEWT_TMPDIR/post_with_backlink.md"
              printf "[< Back](index.html)\n\n" > "$temp_post_with_backlink"
-             cat "$file" >> "$temp_post_with_backlink"
+             awk -f "$awk_dir/frontmatter.awk" "$file" >> "$temp_post_with_backlink"
              content_file="$temp_post_with_backlink"
         fi
     fi
@@ -743,7 +743,13 @@ render_markdown() {
     fi
     head_extra=""
     if [ -n "$favicon_src" ]; then
-        head_extra="<link rel=\"icon\" href=\"$favicon_src\" />"
+        if echo "$favicon_src" | grep -q "^http"; then
+            head_extra="<link rel=\"icon\" href=\"$favicon_src\" />"
+        elif echo "$favicon_src" | grep -q "^/"; then
+            head_extra="<link rel=\"icon\" href=\"$favicon_src\" />"
+        else
+            head_extra="<link rel=\"icon\" href=\"/$favicon_src\" />"
+        fi
     fi
 
     parse_frontmatter "$file"

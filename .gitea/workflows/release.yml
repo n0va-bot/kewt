@@ -122,19 +122,16 @@ jobs:
           CHECKSUM=$(sha256sum kewt-binary | awk '{print $1}')
           rm -f kewt-binary
 
+          git clone https://x-access-token:${{ secrets.GH_RELEASE_TOKEN }}@github.com/n0va-bot/homebrew-tap.git brew-work || true
           mkdir -p brew-work/Formula
           sed -e "s/VERSION_PLACEHOLDER/${VERSION}/g" \
               -e "s/SHA256SUM_PLACEHOLDER/${CHECKSUM}/g" \
               packaging/homebrew/kewt.rb.template > brew-work/Formula/kewt.rb
 
           cd brew-work
-          git init
-          git remote add origin https://x-access-token:${{ secrets.GH_RELEASE_TOKEN }}@github.com/n0va-bot/homebrew-tap.git
-          git fetch origin main || true
-          git checkout main 2>/dev/null || git checkout --orphan main
-
+          [ -d .git ] || { git init && git checkout --orphan main && git remote add origin https://x-access-token:${{ secrets.GH_RELEASE_TOKEN }}@github.com/n0va-bot/homebrew-tap.git; }
           git add Formula/kewt.rb
           git config user.name "${{ github.actor }}"
           git config user.email "${{ github.actor }}@users.noreply.github.com"
           git commit -m "Update kewt to ${TAG}" || echo "No changes to commit"
-          git push origin main
+          git push -u origin main
