@@ -20,9 +20,11 @@ function mask_html_tags(s,    out, rest, start, len, tag, token) {
     return out rest
 }
 
-function restore_html_tags(s,    i) {
+function restore_html_tags(s,    i, val) {
     for (i = 1; i <= html_tag_count; i++) {
-        gsub(html_tag_token[i], html_tag_value[i], s)
+        val = html_tag_value[i]
+        gsub(/&/, "\\\\&", val)
+        gsub(html_tag_token[i], val, s)
     }
     return s
 }
@@ -55,6 +57,36 @@ function restore_html_tags(s,    i) {
         start = RSTART; len = RLENGTH
         email = substr(line, start + 1, len - 2)
         repl = "<a href=\"mailto:" email "\">" email "</a>"
+        line = substr(line, 1, start - 1) repl substr(line, start + len)
+    }
+
+    # typed embeds: !i, !v, !a, !f, !e
+    while (match(line, /![ivafe]\[[^\]]*\]\([^\)]+ "[^"]*"\)/)) {
+        start = RSTART; len = RLENGTH
+        token = substr(line, start, len)
+        etype = substr(token, 2, 1)
+        match(token, /\[[^\]]*\]/); alt = substr(token, RSTART + 1, RLENGTH - 2)
+        match(token, /"[^"]*"/); etitle = substr(token, RSTART + 1, RLENGTH - 2)
+        match(token, /\([^\)]+/); inner = substr(token, RSTART + 1, RLENGTH - 1)
+        sub(/[[:space:]]*"[^"]*"/, "", inner); src = inner
+        repl = "<img data-embed-type=\"" etype "\" alt=\"" alt "\" src=\"" src "\" title=\"" etitle "\" />"
+        line = substr(line, 1, start - 1) repl substr(line, start + len)
+    }
+    while (match(line, /![ivafe]\[[^\]]*\]\([^\)]+\)/)) {
+        start = RSTART; len = RLENGTH
+        token = substr(line, start, len)
+        etype = substr(token, 2, 1)
+        match(token, /\[[^\]]*\]/); alt = substr(token, RSTART + 1, RLENGTH - 2)
+        match(token, /\([^\)]+/); src = substr(token, RSTART + 1, RLENGTH - 1)
+        repl = "<img data-embed-type=\"" etype "\" alt=\"" alt "\" src=\"" src "\" />"
+        line = substr(line, 1, start - 1) repl substr(line, start + len)
+    }
+    while (match(line, /![ivafe]\[[^\]]+\]/)) {
+        start = RSTART; len = RLENGTH
+        token = substr(line, start, len)
+        etype = substr(token, 2, 1)
+        src = substr(token, 4, len - 4)
+        repl = "<img data-embed-type=\"" etype "\" src=\"" src "\" />"
         line = substr(line, 1, start - 1) repl substr(line, start + len)
     }
 

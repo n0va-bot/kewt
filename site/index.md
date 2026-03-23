@@ -14,9 +14,11 @@ It's meant to be a static site generator, like _[kew](https://github.com/uint23/
 ## Features
 
 - No dependencies
+- Frontmatter support (title, date, draft)
 - Supports many embed types
 - Automatic css variable replacement for older browsers
 - Automatic inlining and embedding of many filetypes with `\![link]` or `\![alt](link)`
+- Typed embeds: `\!i`, `\!v`, `\!a`, `\!f`, `\!e`
 - Inline html support
 - MFM `$font` and `\<plain>` tags
 - GFM Admonition support (that's what the blocks like the warning block below are called)
@@ -96,7 +98,7 @@ bpkg install n0va-bot/kewt
 
 `--new [title]` creates a new site directory with a copied `site.conf` and a default `index.md`.
 
-`--post` creates a new empty markdown file in the configured `posts_dir` with the current date and time as the name.
+`--post [title]` creates a new markdown file in the configured `posts_dir` with the current date/time as the name and creates the default frontmatter.
 
 ### site.conf
 
@@ -169,6 +171,28 @@ custom_admonitions = ""
   - other global links are embedded as `<iframe>`
 - `\![alt](link)` works the same, with `alt` used for images
 - `\!![]` and `\!![alt](link)` force inline local file contents
+- **Typed Embeds**: Force specific output regardless of extension:
+  - `\!i[link]` or `\!i[alt](link)`: **I**mage
+  - `\!v[link]`: **V**ideo
+  - `\!a[link]`: **A**udio
+  - `\!f[link]`: I**f**rame
+  - `\!e[link]`: Inline/**e**mbed text/code file directly
+
+### Frontmatter
+
+You can set metadata for a page using a `site.conf`-style frontmatter block at the very top of `.md` files:
+
+```conf
+---
+title = "Custom Page Title"
+date = "2026-03-23 11:32"
+draft = false
+---
+```
+
+- `title`: Overrides the page title, post name in index links, and RSS `<title>`.
+- `date`: Overrides the post date and time. Supports `YYYY-MM-DD` and `YYYY-MM-DD HH:MM` (or `HH-MM`).
+- `draft`: If `true`, the file is excluded from HTML generation
 
 ***
 

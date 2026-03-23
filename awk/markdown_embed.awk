@@ -204,7 +204,7 @@ function render_embed(src, alt, has_alt, force_inline,    ext, local_path, conte
         }
         if (is_audio_ext(ext)) return "<audio controls src=\"" src "\"></audio>"
         if (is_video_ext(ext)) return "<video controls src=\"" src "\"></video>"
-        return "<iframe src=\"" src "\"></iframe>"
+        return "<iframe src=\"" src "\" allowfullscreen></iframe>"
     }
 
     if (is_image_ext(ext)) {
@@ -223,7 +223,29 @@ function render_embed(src, alt, has_alt, force_inline,    ext, local_path, conte
         }
     }
 
-    return "<iframe src=\"" src "\"></iframe>"
+    return "<iframe src=\"" src "\" allowfullscreen></iframe>"
+}
+
+function render_typed_embed(etype, src, alt, has_alt,    local_path, content) {
+    if (etype == "i") {
+        if (has_alt) return "<img alt=\"" alt "\" src=\"" src "\" />"
+        return "<img src=\"" src "\" />"
+    }
+    if (etype == "v") return "<video controls src=\"" src "\"></video>"
+    if (etype == "a") return "<audio controls src=\"" src "\"></audio>"
+    if (etype == "f") return "<iframe src=\"" src "\" allowfullscreen></iframe>"
+    if (etype == "e") {
+        if (!is_global_url(src)) {
+            local_path = resolve_local_path(src)
+            if (local_path != "") {
+                content = read_file(local_path)
+                if (content ~ /\n$/) sub(/\n$/, "", content)
+                return content
+            }
+        }
+        return render_embed(src, alt, has_alt, 1)
+    }
+    return render_embed(src, alt, has_alt, 0)
 }
 
 function extract_attr(tag, attr,    pat, m, token) {
@@ -319,7 +341,7 @@ function apply_td_vertical_align(line,    out, rest, seg, td_tag, img_tag, after
     return out rest
 }
 
-function rewrite_img_tags(line,    out, rest, tag, src, alt, force_inline_tag, pre, post, repl) {
+function rewrite_img_tags(line,    out, rest, tag, src, alt, force_inline_tag, embed_type, pre, post, repl) {
     out = ""
     rest = line
     while (match(rest, /<img[^>]*\/?>/)) {
@@ -329,7 +351,10 @@ function rewrite_img_tags(line,    out, rest, tag, src, alt, force_inline_tag, p
         src = extract_attr(tag, "src")
         alt = extract_attr(tag, "alt")
         force_inline_tag = extract_attr(tag, "data-force-inline")
-        if (is_image_ext(ext_of(src)) && force_inline_tag == "") {
+        embed_type = extract_attr(tag, "data-embed-type")
+        if (embed_type != "") {
+            repl = render_typed_embed(embed_type, src, alt, (alt != ""))
+        } else if (is_image_ext(ext_of(src)) && force_inline_tag == "") {
             # Preserve hand-written <img> attributes (style/class/etc) for normal images.
             repl = tag
         } else {

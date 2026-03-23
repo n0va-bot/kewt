@@ -3,8 +3,14 @@ function strip_markdown(s) {
     gsub(/[*_`~]/, "", s)
     gsub(/[\[\]]/, "", s)
     gsub(/\([^\)]*\)/, "", s)
+    s = tolower(s)
+    gsub(/[^a-z0-9 -]/, "", s)
     gsub(/^[[:space:]]+|[[:space:]]+$/, "", s)
     gsub(/[[:space:]]+/, "-", s)
+    gsub(/-{2,}/, "-", s)
+    gsub(/^-+|-+$/, "", s)
+    if (length(s) > 80) s = substr(s, 1, 80)
+    gsub(/-+$/, "", s)
     return s
 }
 function print_header(line) {

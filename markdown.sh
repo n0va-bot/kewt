@@ -18,7 +18,12 @@ sed_inplace() {
 temp_file="${KEWT_TMPDIR:-/tmp}/markdown.$$.md"
 cat "$@" > "$temp_file"
 
-trap 'rm -f "$temp_file" "$temp_file.tmp"' EXIT INT TERM
+trap 'rm -f "$temp_file" "$temp_file.tmp" "$temp_file.fm"' EXIT INT TERM
+
+# Frontmatter
+fm_file="$temp_file.fm"
+: > "$fm_file"
+awk -v fm_out="$fm_file" -f "$awk_dir/frontmatter.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
 
 # Mask
 awk -f "$awk_dir/mask_inline_code.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"

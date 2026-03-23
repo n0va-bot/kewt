@@ -107,6 +107,7 @@ EOF
 
 create_new_post() {
     post_src_dir="$1"
+    post_user_title="$2"
 
     target_dir="$post_src_dir"
     if [ -n "$posts_dir" ]; then
@@ -126,7 +127,12 @@ create_new_post() {
         counter=$((counter + 1))
     done
 
-    touch "$file_path"
+    post_date_val="$(date "+%Y-%m-%d %H:%M")"
+    if [ -n "$post_user_title" ]; then
+        printf -- '---\ntitle = "%s"\ndate = "%s"\ndraft = false\n---\n# %s\n' "$post_user_title" "$post_date_val" "$post_user_title" > "$file_path"
+    else
+        printf -- '---\ndate = "%s"\ndraft = false\n---\n' "$post_date_val" > "$file_path"
+    fi
 
     echo "Created new post at '$file_path'."
     exit 0
@@ -263,6 +269,10 @@ while [ $# -gt 0 ]; do
             ;;
         --post)
             post_mode="true"
+            if [ $# -gt 1 ] && [ "${2#-}" = "$2" ]; then
+                post_title="$2"
+                shift
+            fi
             ;;
         --update)
             update_dir="."
@@ -512,7 +522,7 @@ if [ -n "$posts_dir" ]; then
     HIDE_ARGS="$HIDE_ARGS -o -path '$src/$posts_dir/*'"
 fi
 
-[ "$post_mode" = "true" ] && create_new_post "$src"
+[ "$post_mode" = "true" ] && create_new_post "$src" "$post_title"
 
 asset_version=""
 if [ "$versioning" = "true" ]; then
@@ -532,6 +542,24 @@ escape_html_attr() {
         -e 's/"/\&quot;/g' \
         -e 's/</\&lt;/g' \
         -e 's/>/\&gt;/g'
+}
+
+parse_frontmatter() {
+    _fm_file="$1"
+    _fm_out="$KEWT_TMPDIR/fm_vals.txt"
+    : > "$_fm_out"
+    awk -v fm_out="$_fm_out" -f "$awk_dir/frontmatter.awk" "$_fm_file" > /dev/null
+    fm_title=""
+    fm_date=""
+    fm_draft=""
+    while IFS='=' read -r _fk _fv; do
+        case "$_fk" in
+            title) fm_title="$_fv" ;;
+            date) fm_date="$_fv" ;;
+            draft) fm_draft="$_fv" ;;
+        esac
+    done < "$_fm_out"
+    rm -f "$_fm_out"
 }
 
 nav_links_html() {
@@ -718,8 +746,12 @@ render_markdown() {
         head_extra="<link rel=\"icon\" href=\"$favicon_src\" />"
     fi
 
+    parse_frontmatter "$file"
+
     page_title="$title"
-    if [ "$generate_page_title" = "true" ] && [ -n "$file" ] && [ -f "$file" ]; then
+    if [ -n "$fm_title" ]; then
+        page_title="$fm_title - $title"
+    elif [ "$generate_page_title" = "true" ] && [ -n "$file" ] && [ -f "$file" ]; then
         if [ "$is_home" = "true" ] && [ -n "$home_name" ]; then
             page_title="$home_name - $title"
         else
@@ -814,30 +846,69 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
             elif [ "${entry%.md}" != "$entry" ]; then
                 label="${name%.md}"
 
-                # Try to get first heading
-                post_h=$(grep -m 1 '^# ' "$entry" | sed 's/^# *//')
-                if [ -n "$post_h" ]; then
-                    post_h=$(echo "$post_h" | sed -e 's/\[//g' -e 's/\]//g' -e 's/!//g' -e 's/\*//g' -e 's/_//g' -e 's/`//g' -e 's/([^)]*)//g' | sed 's/\\//g')
+                # Parse frontmatter for date/title/draft
+                parse_frontmatter "$entry"
+                [ "$fm_draft" = "true" ] && continue
 
-                    if [ "$rel_dir" = "$posts_dir" ] || [ "./$rel_dir" = "$posts_dir" ]; then
-                        # For posts add date and time
+                # Try to get first heading
+                post_h="$fm_title"
+                if [ -z "$post_h" ]; then
+                    post_h=$(grep -m 1 '^# ' "$entry" | sed 's/^# *//')
+                    if [ -n "$post_h" ]; then
+                        post_h=$(echo "$post_h" | sed -e 's/\[//g' -e 's/\]//g' -e 's/!//g' -e 's/\*//g' -e 's/_//g' -e 's/`//g' -e 's/([^)]*)//g' | sed 's/\\//g')
+                    fi
+                fi
+
+                is_post_entry="false"
+                if [ "$rel_dir" = "$posts_dir" ] || [ "./$rel_dir" = "$posts_dir" ]; then
+                    is_post_entry="true"
+                fi
+
+                if [ -n "$post_h" ]; then
+                    if [ "$is_post_entry" = "true" ]; then
+                        # Use frontmatter date if available, else parse from filename
+                        if [ -n "$fm_date" ]; then
+                            p_date=$(echo "$fm_date" | sed 's/^\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\).*/\1/')
+                            p_time=""
+                            if echo "$fm_date" | grep -q '^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}[ T_-]\?[0-9]\{2\}[:\-][0-9]\{2\}'; then
+                                p_time=$(echo "$fm_date" | sed 's/^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}[ T_-]\?\([0-9]\{2\}[:\-][0-9]\{2\}\).*/\1/' | tr '-' ':')
+                            fi
+                        else
+                            p_date=$(echo "${name%.md}" | sed 's/^\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\).*/\1/')
+                            p_time="00:00"
+                            if echo "${name%.md}" | grep -q '^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}-[0-9]\{2\}[:\-][0-9]\{2\}'; then
+                                 p_time=$(echo "${name%.md}" | sed 's/^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}-\([0-9]\{2\}[:\-][0-9]\{2\}\).*/\1/' | tr '-' ':')
+                            fi
+                        fi
+                        if [ -n "$p_time" ]; then
+                            label="$post_h - $p_date $p_time"
+                        else
+                            label="$post_h - $p_date"
+                        fi
+                    else
+                        label="$post_h"
+                    fi
+                elif [ "$is_post_entry" = "true" ]; then
+                    # No heading; use date
+                    if [ -n "$fm_date" ]; then
+                        p_date=$(echo "$fm_date" | sed 's/^\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\).*/\1/')
+                        p_time=""
+                        if echo "$fm_date" | grep -q '^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}[ T_-]\?[0-9]\{2\}[:\-][0-9]\{2\}'; then
+                            p_time=$(echo "$fm_date" | sed 's/^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}[ T_-]\?\([0-9]\{2\}[:\-][0-9]\{2\}\).*/\1/' | tr '-' ':')
+                        fi
+                        if [ -n "$p_time" ]; then
+                            label="$p_date $p_time"
+                        else
+                            label="$p_date"
+                        fi
+                    else
                         p_date=$(echo "${name%.md}" | sed 's/^\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\).*/\1/')
                         p_time="00:00"
                         if echo "${name%.md}" | grep -q '^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}-[0-9]\{2\}[:\-][0-9]\{2\}'; then
                              p_time=$(echo "${name%.md}" | sed 's/^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}-\([0-9]\{2\}[:\-][0-9]\{2\}\).*/\1/' | tr '-' ':')
                         fi
-                        label="$post_h - $p_date $p_time"
-                    else
-                        label="$post_h"
+                        label="$p_date $p_time"
                     fi
-                elif [ "$rel_dir" = "$posts_dir" ] || [ "./$rel_dir" = "$posts_dir" ]; then
-                    # No heading and date and time for posts
-                    p_date=$(echo "${name%.md}" | sed 's/^\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\).*/\1/')
-                    p_time="00:00"
-                    if echo "${name%.md}" | grep -q '^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}-[0-9]\{2\}[:\-][0-9]\{2\}'; then
-                         p_time=$(echo "${name%.md}" | sed 's/^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}-\([0-9]\{2\}[:\-][0-9]\{2\}\).*/\1/' | tr '-' ':')
-                    fi
-                    label="$p_date $p_time"
                 fi
                 echo "- [$label](${name%.md}.html)" >> "$temp_index"
             else
@@ -884,6 +955,11 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type f -print" | sort | while 
     fi
 
     if [ "${file%.md}" != "$file" ] && [ "$is_preserved" -eq 0 ]; then
+        # Skip draft files
+        parse_frontmatter "$file"
+        if [ "$fm_draft" = "true" ]; then
+            continue
+        fi
         is_home="false"; [ "$file" = "$src/index.md" ] && is_home="true"
         out_file="$out/${rel_path%.md}.html"
         if needs_rebuild "$file" "$out_file"; then
@@ -941,20 +1017,34 @@ if [ "$generate_feed" = "true" ] && [ -n "$base_url" ]; then
     printf '    <description>%s</description>\n' "$title" >> "$feed_path"
     printf '    <lastBuildDate>%s</lastBuildDate>\n' "$build_date" >> "$feed_path"
 
-    find "$src" -type f -name '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]*.md' -print | LC_ALL=C sort -r | while IFS= read -r post_file; do
+    find "$src" -type f -name '*.md' -path "*${posts_dir:-__no_posts__}*" -print | LC_ALL=C sort -r | while IFS= read -r post_file; do
         post_basename=$(basename "$post_file" .md)
-        # Extract YYYY-MM-DD
-        post_date=$(echo "$post_basename" | sed 's/^\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\).*/\1/')
 
-        # Extract HH:MM if present (e.g., 2026-03-17-10:30 or 2026-03-17-10:30_1)
-        post_time="00:00"
-        if echo "$post_basename" | grep -q '^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}-[0-9]\{2\}[:\-][0-9]\{2\}'; then
-            post_time=$(echo "$post_basename" | sed 's/^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}-\([0-9]\{2\}[:\-][0-9]\{2\}\).*/\1/' | tr '-' ':')
+        # Parse frontmatter
+        parse_frontmatter "$post_file"
+        [ "$fm_draft" = "true" ] && continue
+
+        # Use frontmatter date, fallback to filename
+        if [ -n "$fm_date" ]; then
+            post_date=$(echo "$fm_date" | sed 's/^\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\).*/\1/')
+            post_time="00:00"
+            if echo "$fm_date" | grep -q '^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}[ T_-]\?[0-9]\{2\}[:\-][0-9]\{2\}'; then
+                post_time=$(echo "$fm_date" | sed 's/^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}[ T_-]\?\([0-9]\{2\}[:\-][0-9]\{2\}\).*/\1/' | tr '-' ':')
+            fi
+        else
+            post_date=$(echo "$post_basename" | sed 's/^\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\).*/\1/')
+            post_time="00:00"
+            if echo "$post_basename" | grep -q '^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}-[0-9]\{2\}[:\-][0-9]\{2\}'; then
+                post_time=$(echo "$post_basename" | sed 's/^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}-\([0-9]\{2\}[:\-][0-9]\{2\}\).*/\1/' | tr '-' ':')
+            fi
         fi
 
         post_slug=$(echo "$post_basename" | sed -e 's/^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}-[0-9]\{2\}[:\-][0-9]\{2\}//' -e 's/^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}//' -e 's/^[_\-]//')
 
-        post_heading=$(grep -m 1 '^# ' "$post_file" | sed 's/^# *//')
+        post_heading="$fm_title"
+        if [ -z "$post_heading" ]; then
+            post_heading=$(grep -m 1 '^# ' "$post_file" | sed 's/^# *//')
+        fi
         if [ -z "$post_heading" ]; then
             if [ -n "$post_slug" ] && ! echo "$post_slug" | grep -q '^[0-9]\+$'; then
                 post_heading=$(echo "$post_slug" | sed 's/-/ /g' | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2)}1')
@@ -963,7 +1053,7 @@ if [ "$generate_feed" = "true" ] && [ -n "$base_url" ]; then
             fi
         fi
         post_heading=$(echo "$post_heading" | sed -e 's/\[//g' -e 's/\]//g' -e 's/!//g' -e 's/\*//g' -e 's/_//g' -e 's/`//g' -e 's/([^)]*)//g' | sed 's/\\//g')
-        post_title="$post_heading - $post_date $post_time"
+        feed_post_title="$post_heading - $post_date $post_time"
 
         rel_path="${post_file#"$src"}"
         rel_path="${rel_path#/}"
@@ -972,6 +1062,8 @@ if [ "$generate_feed" = "true" ] && [ -n "$base_url" ]; then
         pub_year=$(echo "$post_date" | cut -d- -f1)
         pub_month=$(echo "$post_date" | cut -d- -f2)
         pub_day=$(echo "$post_date" | cut -d- -f3)
+        # zero-padded
+        pub_day=$(printf '%02d' "${pub_day#0}")
         case "$pub_month" in
             01) pub_mon="Jan" ;; 02) pub_mon="Feb" ;; 03) pub_mon="Mar" ;;
             04) pub_mon="Apr" ;; 05) pub_mon="May" ;; 06) pub_mon="Jun" ;;
@@ -981,7 +1073,7 @@ if [ "$generate_feed" = "true" ] && [ -n "$base_url" ]; then
         pub_date="${pub_day} ${pub_mon} ${pub_year} ${post_time}:00 +0000"
 
         printf '    <item>\n' >> "$feed_path"
-        printf '      <title>%s</title>\n' "$post_title" >> "$feed_path"
+        printf '      <title>%s</title>\n' "$feed_post_title" >> "$feed_path"
         printf '      <link>%s</link>\n' "$post_url" >> "$feed_path"
         printf '      <guid>%s</guid>\n' "$post_url" >> "$feed_path"
         printf '      <pubDate>%s</pubDate>\n' "$pub_date" >> "$feed_path"
