@@ -10,7 +10,7 @@
 _kewt_ is a minimalist ssg inspired by _[werc](http://werc.cat-v.org/)_ and _[kew](https://github.com/uint23/kew)_
 
 
-## [Installation](https://kewt.krzak.org/#Installation)
+## [Installation](https://kewt.krzak.org/#installation)
 
 ## Contributing
 
