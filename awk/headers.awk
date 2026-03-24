@@ -38,7 +38,7 @@ BEGIN {
     in_pre = 0
 }
 {
-    if ($0 ~ /^<pre><code>/) {
+    if ($0 ~ /^<pre><code/) {
         in_pre = 1
         if (has_prev && prev != "") { print_header(prev); has_prev = 0 }
         print
