@@ -1039,10 +1039,12 @@ if [ -n "$base_url" ]; then
         # Don't include 404 in the sitemap (duh)
         [ "${rel_url#/}" = "$error_page" ] && continue
 
-        printf '  <url>\n' >> "$sitemap_file"
-        printf '    <loc>%s%s</loc>\n' "$base_url" "$rel_url" >> "$sitemap_file"
-        printf '    <lastmod>%s</lastmod>\n' "$today" >> "$sitemap_file"
-        printf '  </url>\n' >> "$sitemap_file"
+        {
+            printf '  <url>\n'
+            printf '    <loc>%s%s</loc>\n' "$base_url" "$rel_url"
+            printf '    <lastmod>%s</lastmod>\n' "$today"
+            printf '  </url>\n'
+        } >> "$sitemap_file"
     done
 
     printf '</urlset>\n' >> "$sitemap_file"
@@ -1054,12 +1056,14 @@ if [ "$generate_feed" = "true" ] && [ -n "$base_url" ]; then
     build_date=$(date -u '+%a, %d %b %Y %H:%M:%S +0000')
 
     printf '<?xml version="1.0" encoding="UTF-8"?>\n' > "$feed_path"
-    printf '<rss version="2.0">\n' >> "$feed_path"
-    printf '  <channel>\n' >> "$feed_path"
-    printf '    <title>%s</title>\n' "$title" >> "$feed_path"
-    printf '    <link>%s</link>\n' "$base_url_feed" >> "$feed_path"
-    printf '    <description>%s</description>\n' "$title" >> "$feed_path"
-    printf '    <lastBuildDate>%s</lastBuildDate>\n' "$build_date" >> "$feed_path"
+    {
+        printf '<rss version="2.0">\n'
+        printf '  <channel>\n'
+        printf '    <title>%s</title>\n' "$title"
+        printf '    <link>%s</link>\n' "$base_url_feed"
+        printf '    <description>%s</description>\n' "$title"
+        printf '    <lastBuildDate>%s</lastBuildDate>\n' "$build_date"
+    } >> "$feed_path"
 
     find "$src" -type f -name '*.md' -path "*${posts_dir:-__no_posts__}*" -print | LC_ALL=C sort -r | while IFS= read -r post_file; do
         post_basename=$(basename "$post_file" .md)
@@ -1116,12 +1120,14 @@ if [ "$generate_feed" = "true" ] && [ -n "$base_url" ]; then
         esac
         pub_date="${pub_day} ${pub_mon} ${pub_year} ${post_time}:00 +0000"
 
-        printf '    <item>\n' >> "$feed_path"
-        printf '      <title>%s</title>\n' "$feed_post_title" >> "$feed_path"
-        printf '      <link>%s</link>\n' "$post_url" >> "$feed_path"
-        printf '      <guid>%s</guid>\n' "$post_url" >> "$feed_path"
-        printf '      <pubDate>%s</pubDate>\n' "$pub_date" >> "$feed_path"
-        printf '    </item>\n' >> "$feed_path"
+        {
+            printf '    <item>\n'
+            printf '      <title>%s</title>\n' "$feed_post_title"
+            printf '      <link>%s</link>\n' "$post_url"
+            printf '      <guid>%s</guid>\n' "$post_url"
+            printf '      <pubDate>%s</pubDate>\n' "$pub_date"
+            printf '    </item>\n'
+        } >> "$feed_path"
     done
 
     printf '  </channel>\n' >> "$feed_path"
