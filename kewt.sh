@@ -13,17 +13,19 @@ Usage: $invoked_as [--from <src>] [--to <out>]
        $invoked_as --new [title]
        $invoked_as --update [dir]
        $invoked_as --post
+       $invoked_as --generate-template
        $invoked_as --version
        $invoked_as --help
 
 Options:
-  --help          Show this help message.
-  --new [title]   Create a new site directory (default: site)
-  --update [dir]  Update site.conf and template.html with latest defaults (defaults to current directory)
-  --post          Create a new empty post file in the configured posts_dir with current date and time as name
-  --version       Show version information.
-  --from <src>    Source directory (default: site)
-  --to <out>      Output directory (default: out)
+  --help                     Show this help message.
+  --new [title]              Create a new site directory (default: site)
+  --update [dir]             Update site.conf and template.html with latest defaults (defaults to current directory)
+  --post                     Create a new empty post file in the configured posts_dir with current date and time as name
+  --generate-template [path] Generate a new template file at <path> (default: template.html)
+  --version                  Show version information.
+  --from <src>               Source directory (default: site)
+  --to <out>                 Output directory (default: out)
 EOF
 }
 
@@ -33,18 +35,7 @@ awk_dir="$script_dir/awk"
 KEWT_TMPDIR=$(mktemp -d "/tmp/kewt_run.XXXXXX")
 trap 'rm -rf "$KEWT_TMPDIR"' EXIT HUP INT TERM
 
-
-
-create_new_site() {
-    new_title="$1"
-    new_dir="site"
-    [ -n "$new_title" ] && new_dir="$new_title"
-
-    [ -e "$new_dir" ] && die "Target '$new_dir' already exists."
-
-    mkdir -p "$new_dir"
-    cat > "$new_dir/site.conf" <<'EOF'
-title = "kewt"
+DEFAULT_CONF='title = "kewt"
 style = "kewt"
 dir_indexes = true
 single_file_index = true
@@ -68,11 +59,9 @@ base_url = ""
 generate_feed = false
 feed_file = "rss.xml"
 posts_dir = ""
-custom_admonitions = ""
-EOF
+custom_admonitions = ""'
 
-    cat > "$new_dir/template.html" <<'EOF'
-<!doctype html>
+DEFAULT_TMPL='<!doctype html>
 <html>
     <head>
         <meta charset="UTF-8" />
@@ -93,8 +82,29 @@ EOF
         <article>{{CONTENT}}</article>
         <footer>{{FOOTER}}</footer>
     </body>
-</html>
-EOF
+</html>'
+
+
+generate_template() {
+    _gt_path="$1"
+    [ -e "$_gt_path" ] && die "File '$_gt_path' already exists."
+    _gt_dir=$(dirname "$_gt_path")
+    [ -d "$_gt_dir" ] || mkdir -p "$_gt_dir"
+    printf '%s\n' "$DEFAULT_TMPL" > "$_gt_path"
+    echo "Generated template at '$_gt_path'."
+    exit 0
+}
+
+create_new_site() {
+    new_title="$1"
+    new_dir="site"
+    [ -n "$new_title" ] && new_dir="$new_title"
+
+    [ -e "$new_dir" ] && die "Target '$new_dir' already exists."
+
+    mkdir -p "$new_dir"
+    printf '%s\n' "$DEFAULT_CONF" > "$new_dir/site.conf"
+    printf '%s\n' "$DEFAULT_TMPL" > "$new_dir/template.html"
     printf "# _kewt_ website\n" > "$new_dir/index.md"
 
     if [ -n "$new_title" ]; then
@@ -147,33 +157,7 @@ update_site() {
 
     # Generate default site.conf
     default_conf="$KEWT_TMPDIR/default_site.conf"
-    cat > "$default_conf" <<'CONFEOF'
-title = "kewt"
-style = "kewt"
-dir_indexes = true
-single_file_index = true
-flatten = false
-order = ""
-home_name = "Home"
-show_home_in_nav = true
-nav_links = ""
-nav_extra = ""
-footer = "made with <a href=\"https://kewt.krzak.org\">kewt</a>"
-logo = ""
-display_logo = false
-display_title = true
-logo_as_favicon = true
-favicon = ""
-generate_page_title = true
-error_page = "not_found.html"
-versioning = false
-enable_header_links = true
-base_url = ""
-generate_feed = false
-feed_file = "rss.xml"
-posts_dir = ""
-custom_admonitions = ""
-CONFEOF
+    printf '%s\n' "$DEFAULT_CONF" > "$default_conf"
 
     # Update site.conf
     if [ ! -f "$target_conf" ]; then
@@ -203,30 +187,7 @@ CONFEOF
     # Update template.html
     if [ -f "$target_tmpl" ]; then
         default_tmpl="$KEWT_TMPDIR/default_template.html"
-        cat > "$default_tmpl" <<'TMPLEOF'
-<!doctype html>
-<html>
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>{{TITLE}}</title>
-
-        <link rel="stylesheet" href="{{CSS}}" type="text/css" />
-        {{HEAD_EXTRA}}
-    </head>
-
-    <body>
-        <header>
-            <h1>{{HEADER_BRAND}}</h1>
-        </header>
-
-        <nav id="side-bar">{{NAV}}</nav>
-
-        <article>{{CONTENT}}</article>
-        <footer>{{FOOTER}}</footer>
-    </body>
-</html>
-TMPLEOF
+        printf '%s\n' "$DEFAULT_TMPL" > "$default_tmpl"
         if cmp -s "$default_tmpl" "$target_tmpl" 2>/dev/null; then
             echo "template.html is already up to date."
         else
@@ -273,6 +234,14 @@ while [ $# -gt 0 ]; do
                 post_title="$2"
                 shift
             fi
+            ;;
+        --generate-template)
+            generate_template_path="template.html"
+            if [ $# -gt 1 ] && [ "${2#-}" = "$2" ]; then
+                generate_template_path="$2"
+                shift
+            fi
+            generate_template "$generate_template_path"
             ;;
         --update)
             update_dir="."
@@ -610,30 +579,7 @@ template="$src/template.html"
 [ -f "$template" ] || template="./template.html"
 if [ ! -f "$template" ]; then
     template="$KEWT_TMPDIR/default_template.html"
-    cat > "$template" <<'EOF'
-<!doctype html>
-<html>
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>{{TITLE}}</title>
-
-        <link rel="stylesheet" href="{{CSS}}" type="text/css" />
-        {{HEAD_EXTRA}}
-    </head>
-
-    <body>
-        <header>
-            <h1>{{HEADER_BRAND}}</h1>
-        </header>
-
-        <nav id="side-bar">{{NAV}}</nav>
-
-        <article>{{CONTENT}}</article>
-        <footer>{{FOOTER}}</footer>
-    </body>
-</html>
-EOF
+    printf '%s\n' "$DEFAULT_TMPL" > "$template"
 fi
 
 [ -d "$out" ] && rm -rf "$out"
