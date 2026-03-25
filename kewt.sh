@@ -811,12 +811,21 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
 
     [ "$dir_indexes" != "true" ] && continue
 
-    if [ ! -f "$dir/index.md" ]; then
+    has_custom_index="false"
+    has_list="false"
+    if [ -f "$dir/index.md" ]; then
+        has_custom_index="true"
+        if grep -q '{{LIST}}' "$dir/index.md" 2>/dev/null; then
+            has_list="true"
+        fi
+    fi
+
+    if [ "$has_custom_index" = "false" ] || [ "$has_list" = "true" ]; then
         is_posts_dir="false"
         if [ -n "$posts_dir" ] && { [ "$rel_dir" = "$posts_dir" ] || [ "./$rel_dir" = "$posts_dir" ]; }; then
             is_posts_dir="true"
         fi
-        if [ "$single_file_index" = "true" ] && [ "$is_posts_dir" = "false" ]; then
+        if [ "$single_file_index" = "true" ] && [ "$is_posts_dir" = "false" ] && [ "$has_list" = "false" ]; then
             md_count=$(find "$dir" ! -name "$(basename "$dir")" -prune -name "*.md" | wc -l)
             if [ "$md_count" -eq 1 ]; then
                 md_file=$(find "$dir" ! -name "$(basename "$dir")" -prune -name "*.md")
@@ -831,10 +840,16 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
         fi
 
         temp_index="$KEWT_TMPDIR/index.md"
-        display_dir="${rel_dir#.}"
-        [ -z "$display_dir" ] && display_dir="/"
-        echo "# Index of $display_dir" > "$temp_index"
-        echo "" >> "$temp_index"
+        temp_list="$KEWT_TMPDIR/list.md"
+        : > "$temp_list"
+
+        if [ "$has_custom_index" = "false" ]; then
+            display_dir="${rel_dir#.}"
+            [ -z "$display_dir" ] && display_dir="/"
+            echo "# Index of $display_dir" > "$temp_index"
+            echo "" >> "$temp_index"
+        fi
+
 
         sort_args=""
         # If this is the posts dir reverse
@@ -848,7 +863,7 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
                 template.html|site.conf|style.css|index.md) continue ;;
             esac
             if [ -d "$entry" ]; then
-                echo "- [${name}/](${name}/index.html)" >> "$temp_index"
+                echo "- [${name}/](${name}/index.html)" >> "$temp_list"
             elif [ "${entry%.md}" != "$entry" ]; then
                 label="${name%.md}"
 
@@ -916,18 +931,37 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
                         label="$p_date $p_time"
                     fi
                 fi
-                echo "- [$label](${name%.md}.html)" >> "$temp_index"
+                echo "- [$label](${name%.md}.html)" >> "$temp_list"
             else
-                echo "- [$name]($name)" >> "$temp_index"
+                echo "- [$name]($name)" >> "$temp_list"
             fi
         done
+        
+        if [ "$has_custom_index" = "true" ]; then
+            awk '
+                /\{\{LIST\}\}/ {
+                    while((getline line < "'"$temp_list"'") > 0) print line
+                    close("'"$temp_list"'")
+                    next
+                }
+                { print }
+            ' "$dir/index.md" > "$temp_index"
+        else
+            cat "$temp_list" >> "$temp_index"
+        fi
+
         is_home="false"; [ "$dir" = "$src" ] && is_home="true"
         target_url="/$rel_dir/index.html"
         [ "$rel_dir" = "." ] && target_url="/index.html"
-        if needs_rebuild "$dir" "$out_dir/index.html"; then
+
+        do_rebuild="false"
+        needs_rebuild "$dir" "$out_dir/index.html" && do_rebuild="true"
+        [ "$has_custom_index" = "true" ] && needs_rebuild "$dir/index.md" "$out_dir/index.html" && do_rebuild="true"
+
+        if [ "$do_rebuild" = "true" ]; then
             render_markdown "$temp_index" "$is_home" "$target_url" > "$out_dir/index.html"
         fi
-        rm "$temp_index"
+        rm -f "$temp_index" "$temp_list"
     fi
 done
 
@@ -944,6 +978,10 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type f -print" | sort | while 
     case "${file##*/}" in
         template.html|site.conf|style.css|styles.css) continue ;;
     esac
+
+    if [ "${file##*/}" = "index.md" ] && grep -q '{{LIST}}' "$file" 2>/dev/null; then
+        continue
+    fi
 
     is_preserved=0
     if [ -n "$(eval "find \"$file\" \( $PRESERVE_ARGS \) -print")" ]; then
