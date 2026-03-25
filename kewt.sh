@@ -761,7 +761,7 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
     has_list="false"
     if [ -f "$dir/index.md" ]; then
         has_custom_index="true"
-        if grep -q '{{LIST}}' "$dir/index.md" 2>/dev/null; then
+        if grep -q '^[[:space:]]*{{LIST}}[[:space:]]*$' "$dir/index.md" 2>/dev/null; then
             has_list="true"
         fi
     fi
@@ -885,7 +885,7 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
         
         if [ "$has_custom_index" = "true" ]; then
             awk '
-                /\{\{LIST\}\}/ {
+                /^[[:space:]]*\{\{LIST\}\}[[:space:]]*$/ {
                     while((getline line < "'"$temp_list"'") > 0) print line
                     close("'"$temp_list"'")
                     next
@@ -925,7 +925,7 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type f -print" | sort | while 
         template.html|site.conf|style.css|styles.css) continue ;;
     esac
 
-    if [ "${file##*/}" = "index.md" ] && grep -q '{{LIST}}' "$file" 2>/dev/null; then
+    if [ "${file##*/}" = "index.md" ] && grep -q '^[[:space:]]*{{LIST}}[[:space:]]*$' "$file" 2>/dev/null; then
         continue
     fi
 
