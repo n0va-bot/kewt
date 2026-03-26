@@ -62,13 +62,20 @@ awk -f "$awk_dir/fenced_code.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_f
 awk -f "$awk_dir/indented_code.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
 awk -f "$awk_dir/pipe_tables.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
 awk -v enable_header_links="$ENABLE_HEADER_LINKS" -f "$awk_dir/headers.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
+awk -f "$awk_dir/definition_lists.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
 awk -f "$awk_dir/lists.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
+
+# TOC
+awk -f "$awk_dir/toc.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
+# Footnotes
+awk -f "$awk_dir/footnotes.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
 
 # Spacing
 awk -f "$awk_dir/breaks.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
 awk -f "$awk_dir/paragraphs.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
 
 # Inline styles
+awk -f "$awk_dir/emoji.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
 awk -f "$awk_dir/markdown_inline.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
 awk -v input_file="$1" -v site_root="$MARKDOWN_SITE_ROOT" -v fallback_file="$MARKDOWN_FALLBACK_FILE" -f "$awk_dir/markdown_embed.awk" "$temp_file"
 rm "$temp_file"

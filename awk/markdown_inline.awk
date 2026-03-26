@@ -230,5 +230,7 @@ function restore_html_tags(s,    i, val) {
         }
     }
 
+    gsub(/<a href="https?:\/\/[^"]*"/, "& rel=\"noopener noreferrer\"", line)
+
     print line
 }

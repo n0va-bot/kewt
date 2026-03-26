@@ -13,7 +13,7 @@ BEGIN {
         next
     }
 
-    if ($0 ~ /^<\/?(div|table|p|[ou]l|h[1-6]|[bh]r|blockquote|li|hr)/) {
+    if ($0 ~ /^<\/?(div|table|p|[ou]l|h[1-6]|[bh]r|blockquote|li|hr|section|article|nav|aside|header|footer|dl|dt|dd)/) {
         if (in_p) {
             print "</p>"
             in_p = 0

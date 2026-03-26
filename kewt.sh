@@ -26,6 +26,8 @@ Options:
   --version                  Show version information.
   --from <src>               Source directory (default: site)
   --to <out>                 Output directory (default: out)
+  --watch, -w                Watch for file changes and rebuild automatically.
+  --serve, -s [port]         Start a local HTTP server after building (default port: 8000).
 EOF
 }
 
@@ -33,7 +35,8 @@ script_dir=$(CDPATH="" cd -- "$(dirname -- "$0")" && pwd)
 awk_dir="$script_dir/awk"
 
 KEWT_TMPDIR=$(mktemp -d "/tmp/kewt_run.XXXXXX")
-trap 'rm -rf "$KEWT_TMPDIR"' EXIT HUP INT TERM
+trap 'rm -rf "$KEWT_TMPDIR"' EXIT
+trap 'exit 0' HUP INT TERM
 
 DEFAULT_CONF='title = "kewt"
 style = "kewt"
@@ -59,6 +62,7 @@ base_url = ""
 generate_feed = false
 feed_file = "rss.xml"
 posts_dir = ""
+posts_per_page = 12
 custom_admonitions = ""'
 
 DEFAULT_TMPL='<!doctype html>
@@ -73,8 +77,10 @@ DEFAULT_TMPL='<!doctype html>
     </head>
 
     <body>
+        <input type="checkbox" id="nav-toggle" class="nav-toggle" aria-hidden="true" />
         <header>
             <h1>{{HEADER_BRAND}}</h1>
+            <label for="nav-toggle" class="nav-toggle-label" aria-hidden="true">&#9776;</label>
         </header>
 
         <nav id="side-bar">{{NAV}}</nav>
@@ -201,8 +207,6 @@ update_site() {
     exit 0
 }
 
-
-
 src=""
 out=""
 new_mode="false"
@@ -210,6 +214,8 @@ new_title=""
 post_mode="false"
 post_title=""
 positional_count=0
+watch_mode="false"
+serve_mode="false"
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -260,6 +266,16 @@ while [ $# -gt 0 ]; do
             [ $# -lt 2 ] && die "--to requires a value."
             out="$2"
             shift
+            ;;
+        --watch|-w)
+            watch_mode="true"
+            ;;
+        --serve|-s)
+            serve_mode="true"
+            if [ $# -ge 2 ] && echo "$2" | grep -qE '^[0-9]+$'; then
+                serve_port="$2"
+                shift
+            fi
             ;;
         --*)
             die "Unknown option: $1"
@@ -427,6 +443,7 @@ base_url=""
 generate_feed="false"
 feed_file="rss.xml"
 posts_dir=""
+posts_per_page="12"
 custom_admonitions=""
 
 load_config() {
@@ -479,6 +496,7 @@ load_config() {
             generate_feed) generate_feed="$val" ;;
             feed_file) feed_file="${val#/}" ;;
             posts_dir) posts_dir="${val#/}" ;;
+            posts_per_page) posts_per_page="$val" ;;
             custom_admonitions) custom_admonitions="$val" ;;
         esac
     done < "$1"
@@ -521,11 +539,13 @@ parse_frontmatter() {
     fm_title=""
     fm_date=""
     fm_draft=""
+    fm_description=""
     while IFS='=' read -r _fk _fv; do
         case "$_fk" in
             title) fm_title="$_fv" ;;
             date) fm_date="$_fv" ;;
             draft) fm_draft="$_fv" ;;
+            description) fm_description="$_fv" ;;
         esac
     done < "$_fm_out"
     rm -f "$_fm_out"
@@ -721,6 +741,22 @@ render_markdown() {
         fi
     fi
 
+    head_extra_og="<meta property=\"og:title\" content=\"$(escape_html_attr "$page_title")\" />"
+    if [ -n "$fm_description" ]; then
+        head_extra_og="$head_extra_og
+        <meta property=\"og:description\" content=\"$(escape_html_attr "$fm_description")\" />"
+    fi
+    og_url="${base_url%/}${current_url}"
+    head_extra_og="$head_extra_og
+        <meta property=\"og:url\" content=\"$(escape_html_attr "$og_url")\" />"
+
+    if [ -n "$head_extra" ]; then
+        head_extra="$head_extra
+        $head_extra_og"
+    else
+        head_extra="$head_extra_og"
+    fi
+
     ENABLE_HEADER_LINKS="$enable_header_links" CUSTOM_ADMONITIONS="$custom_admonitions" MARKDOWN_SITE_ROOT="$src" MARKDOWN_FALLBACK_FILE="$script_dir/styles/$style.css" sh "$script_dir/markdown.sh" "$content_file" | AWK_CURRENT_URL="$current_url" AWK_TITLE="$page_title" AWK_NAV="$nav" AWK_FOOTER="$footer" AWK_STYLE_PATH="${style_path}${asset_version}" AWK_HEADER_BRAND="$header_brand" AWK_HEAD_EXTRA="$head_extra" awk -f "$awk_dir/render_template.awk" "$local_template"
 }
 
@@ -736,6 +772,7 @@ needs_rebuild() {
     return 1
 }
 
+build_site() {
 echo "Building site from '$src' to '$out'..."
 
 eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while read -r dir; do
@@ -883,29 +920,94 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
             fi
         done
         
-        if [ "$has_custom_index" = "true" ]; then
-            awk '
-                /^[[:space:]]*\{\{LIST\}\}[[:space:]]*$/ {
-                    while((getline line < "'"$temp_list"'") > 0) print line
-                    close("'"$temp_list"'")
-                    next
-                }
-                { print }
-            ' "$dir/index.md" > "$temp_index"
-        else
-            cat "$temp_list" >> "$temp_index"
-        fi
-
         is_home="false"; [ "$dir" = "$src" ] && is_home="true"
         target_url="/$rel_dir/index.html"
         [ "$rel_dir" = "." ] && target_url="/index.html"
 
-        do_rebuild="false"
-        needs_rebuild "$dir" "$out_dir/index.html" && do_rebuild="true"
-        [ "$has_custom_index" = "true" ] && needs_rebuild "$dir/index.md" "$out_dir/index.html" && do_rebuild="true"
+        num_items=$(wc -l < "$temp_list")
+        if [ "$is_posts_dir" = "true" ] && [ -n "$posts_per_page" ] && [ "$posts_per_page" -gt 0 ] && [ "$num_items" -gt "$posts_per_page" ]; then
+            num_pages=$(( (num_items + posts_per_page - 1) / posts_per_page ))
+            for p in $(seq 1 $num_pages); do
+                chunk_list="$KEWT_TMPDIR/chunk.md"
+                start_line=$(( (p - 1) * posts_per_page + 1 ))
+                tail -n +$start_line "$temp_list" | head -n "$posts_per_page" > "$chunk_list"
 
-        if [ "$do_rebuild" = "true" ]; then
-            render_markdown "$temp_index" "$is_home" "$target_url" > "$out_dir/index.html"
+                base_url_dir="$(dirname "$target_url")"
+                [ "$base_url_dir" = "/" ] && base_url_dir=""
+
+                nav_html="<div class=\"pagination\">"
+                if [ "$p" -gt 1 ]; then
+                    if [ "$p" -eq 2 ]; then
+                        nav_html="$nav_html <a href=\"$base_url_dir/index.html\" class=\"prev-page\">&laquo; Prev</a> "
+                    else
+                        nav_html="$nav_html <a href=\"$base_url_dir/page/$((p-1))/index.html\" class=\"prev-page\">&laquo; Prev</a> "
+                    fi
+                fi
+                nav_html="$nav_html <span class=\"page-number\">Page $p of $num_pages</span> "
+                if [ "$p" -lt "$num_pages" ]; then
+                    nav_html="$nav_html <a href=\"$base_url_dir/page/$((p+1))/index.html\" class=\"next-page\">Next &raquo;</a> "
+                fi
+                nav_html="$nav_html</div>"
+
+                echo "" >> "$chunk_list"
+                echo "$nav_html" >> "$chunk_list"
+
+                temp_index_p="$KEWT_TMPDIR/index_p$p.md"
+                if [ "$has_custom_index" = "false" ]; then
+                    display_dir="${rel_dir#.}"
+                    [ -z "$display_dir" ] && display_dir="/"
+                    echo "# Index of $display_dir" > "$temp_index_p"
+                    echo "" >> "$temp_index_p"
+                else
+                    : > "$temp_index_p"
+                fi
+
+                if [ "$has_custom_index" = "true" ]; then
+                    awk '
+                        /^[[:space:]]*\{\{LIST\}\}[[:space:]]*$/ {
+                            while((getline line < "'"$chunk_list"'") > 0) print line
+                            close("'"$chunk_list"'")
+                            next
+                        }
+                        { print }
+                    ' "$dir/index.md" >> "$temp_index_p"
+                else
+                    cat "$chunk_list" >> "$temp_index_p"
+                fi
+
+                if [ "$p" -eq 1 ]; then
+                    out_file="$out_dir/index.html"
+                    target_url_p="$target_url"
+                else
+                    out_file="$out_dir/page/$p/index.html"
+                    target_url_p="$base_url_dir/page/$p/index.html"
+                    mkdir -p "$(dirname "$out_file")"
+                fi
+
+                render_markdown "$temp_index_p" "$is_home" "$target_url_p" > "$out_file"
+                rm -f "$temp_index_p" "$chunk_list"
+            done
+        else
+            if [ "$has_custom_index" = "true" ]; then
+                awk '
+                    /^[[:space:]]*\{\{LIST\}\}[[:space:]]*$/ {
+                        while((getline line < "'"$temp_list"'") > 0) print line
+                        close("'"$temp_list"'")
+                        next
+                    }
+                    { print }
+                ' "$dir/index.md" > "$temp_index"
+            else
+                cat "$temp_list" >> "$temp_index"
+            fi
+
+            do_rebuild="false"
+            needs_rebuild "$dir" "$out_dir/index.html" && do_rebuild="true"
+            [ "$has_custom_index" = "true" ] && needs_rebuild "$dir/index.md" "$out_dir/index.html" && do_rebuild="true"
+
+            if [ "$do_rebuild" = "true" ]; then
+                render_markdown "$temp_index" "$is_home" "$target_url" > "$out_dir/index.html"
+            fi
         fi
         rm -f "$temp_index" "$temp_list"
     fi
@@ -1053,18 +1155,22 @@ if [ "$generate_feed" = "true" ] && [ -n "$base_url" ]; then
         rel_path="${rel_path#/}"
         post_url="$base_url_feed/${rel_path%.md}.html"
 
-        pub_year=$(echo "$post_date" | cut -d- -f1)
-        pub_month=$(echo "$post_date" | cut -d- -f2)
-        pub_day=$(echo "$post_date" | cut -d- -f3)
-        # zero-padded
-        pub_day=$(printf '%02d' "${pub_day#0}")
-        case "$pub_month" in
-            01) pub_mon="Jan" ;; 02) pub_mon="Feb" ;; 03) pub_mon="Mar" ;;
-            04) pub_mon="Apr" ;; 05) pub_mon="May" ;; 06) pub_mon="Jun" ;;
-            07) pub_mon="Jul" ;; 08) pub_mon="Aug" ;; 09) pub_mon="Sep" ;;
-            10) pub_mon="Oct" ;; 11) pub_mon="Nov" ;; 12) pub_mon="Dec" ;;
-        esac
-        pub_date="${pub_day} ${pub_mon} ${pub_year} ${post_time}:00 +0000"
+        if date -u -d "$post_date $post_time" '+%a, %d %b %Y %H:%M:%S +0000' >/dev/null 2>&1; then
+            pub_date=$(date -u -d "$post_date $post_time" '+%a, %d %b %Y %H:%M:%S +0000')
+        else
+            pub_year=$(echo "$post_date" | cut -d- -f1)
+            pub_month=$(echo "$post_date" | cut -d- -f2)
+            pub_day=$(echo "$post_date" | cut -d- -f3)
+            # zero-padded
+            pub_day=$(printf '%02d' "${pub_day#0}")
+            case "$pub_month" in
+                01) pub_mon="Jan" ;; 02) pub_mon="Feb" ;; 03) pub_mon="Mar" ;;
+                04) pub_mon="Apr" ;; 05) pub_mon="May" ;; 06) pub_mon="Jun" ;;
+                07) pub_mon="Jul" ;; 08) pub_mon="Aug" ;; 09) pub_mon="Sep" ;;
+                10) pub_mon="Oct" ;; 11) pub_mon="Nov" ;; 12) pub_mon="Dec" ;;
+            esac
+            pub_date="Mon, ${pub_day} ${pub_mon} ${pub_year} ${post_time}:00 +0000"
+        fi
 
         {
             printf '    <item>\n'
@@ -1081,3 +1187,46 @@ if [ "$generate_feed" = "true" ] && [ -n "$base_url" ]; then
 fi
 
 echo "Build complete."
+}
+
+build_site
+
+if [ "$serve_mode" = "true" ]; then
+    port="${serve_port:-8000}"
+    if command -v python3 >/dev/null 2>&1; then
+        python3 -m http.server "$port" -d "$out" >/dev/null 2>&1 &
+        server_pid=$!
+        echo "Serving '$out' on http://localhost:$port (python3)"
+    elif command -v busybox >/dev/null 2>&1; then
+        busybox httpd -f -p "$port" -h "$out" >/dev/null 2>&1 &
+        server_pid=$!
+        echo "Serving '$out' on http://localhost:$port (busybox)"
+    else
+        die "Neither python3 nor busybox httpd is available to serve."
+    fi
+
+    trap 'kill $server_pid 2>/dev/null; rm -rf "$KEWT_TMPDIR"' EXIT
+    trap 'kill $server_pid 2>/dev/null; exit 0' HUP INT TERM
+fi
+
+if [ "$watch_mode" = "true" ]; then
+    echo "Watching for changes in '$src'..."
+    touch "$KEWT_TMPDIR/watch_mark"
+    while true; do
+        sleep 1
+        changed="$(find "$src" -type f -newer "$KEWT_TMPDIR/watch_mark" 2>/dev/null | head -n 1)"
+        [ -z "$changed" ] && [ -f "site.conf" ] && [ "site.conf" -nt "$KEWT_TMPDIR/watch_mark" ] && changed="site.conf"
+        [ -z "$changed" ] && [ -f "$src/site.conf" ] && [ "$src/site.conf" -nt "$KEWT_TMPDIR/watch_mark" ] && changed="$src/site.conf"
+        [ -z "$changed" ] && [ -f "$template" ] && [ "$template" -nt "$KEWT_TMPDIR/watch_mark" ] && changed="$template"
+        [ -z "$changed" ] && [ -d "$script_dir/styles" ] && changed="$(find "$script_dir/styles" -type f -newer "$KEWT_TMPDIR/watch_mark" 2>/dev/null | head -n 1)"
+        
+        if [ -n "$changed" ]; then
+            echo ""
+            echo "Change detected, rebuilding..."
+            build_site
+            touch "$KEWT_TMPDIR/watch_mark"
+        fi
+    done
+elif [ "$serve_mode" = "true" ]; then
+    wait "$server_pid"
+fi

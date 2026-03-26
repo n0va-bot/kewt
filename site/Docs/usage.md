@@ -9,11 +9,15 @@ kewt --generate-template [path]
 kewt --update [dir]
 kewt --from <src> --to <out>
 kewt [src] [out]
+kewt --watch
+kewt --serve [port]
 ```
 - `--new [title]` creates a new site directory with a default `site.conf`, `template.html`, and `index.md`.
 - `--post [title]` creates a new markdown file in the configured `posts_dir` with the current date/time as the filename and default frontmatter.
 - `--generate-template [path]` writes the default `template.html` to the given path (defaults to `template.html` in the current directory).
 - `--update [dir]` adds any missing keys to `site.conf` and checks `template.html` against the latest default.
+- `--watch` (`-w`) watches for file changes in the source directory and rebuilds automatically.
+- `--serve` (`-s`) starts a local HTTP server (python3 or busybox) in the output directory after building. Use with the port number to specify the port. Composable with `--watch`.
 
 ## site.conf
 
@@ -42,6 +46,7 @@ base_url = ""
 generate_feed = false
 feed_file = "rss.xml"
 posts_dir = ""
+posts_per_page = 12
 custom_admonitions = ""
 ```
 - `title` - site title
@@ -67,5 +72,6 @@ custom_admonitions = ""
 - `generate_feed` - enable RSS feed generation (requires `base_url`)
 - `feed_file` - filename for the generated RSS feed (default: "rss.xml")
 - `posts_dir` - directory name containing posts (e.g., "posts"). Enables reverse-chronological sorting, title headings in indexes, and automatic backlinks.
+- `posts_per_page` - number of posts per page in paginated post indexes (default: 12). Set to 0 to disable pagination.
 - `enable_header_links` - turns markdown section headings into clickable anchor links (default: true)
 - `custom_admonitions` - comma separated list of custom admonitions

@@ -14,7 +14,7 @@ It's meant to be a static site generator, like _[kew](https://github.com/uint23/
 ## Features
 
 - No dependencies
-- Frontmatter support (title, date, draft)
+- Frontmatter support (title, date, draft, description)
 - Supports many embed types
 - Automatic css variable replacement for older browsers
 - Automatic inlining and embedding of many filetypes with `\![link]` or `\![alt](link)`
@@ -31,6 +31,13 @@ It's meant to be a static site generator, like _[kew](https://github.com/uint23/
 - Clickable markdown header anchors
 - Mobile responsive layout
 - Customisable directory index pages with `{{LIST}}`
+- Open Graph meta tags from frontmatter
+- Auto-generated Table of Contents via `{{TOC}}`
+- Footnotes (`[^id]`)
+- Definition lists
+- Emoji shortcodes (`:smile:`, `:fire:`, etc.)
+- Post pagination
+- `--watch` and `--serve` modes for development
 
 ***
 
