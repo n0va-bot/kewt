@@ -16,6 +16,7 @@ BEGIN {
     style_path = ENVIRON["AWK_STYLE_PATH"]
     head_extra = ENVIRON["AWK_HEAD_EXTRA"]
     header_brand = ENVIRON["AWK_HEADER_BRAND"]
+    lang = ENVIRON["AWK_LANG"]
     if (current_url != "") {
         nav = replace_all(nav, "href=\"" current_url "\"", "href=\"" current_url "\" class=\"current-page\"")
     }
@@ -24,6 +25,7 @@ BEGIN {
 {
     line = $0
     line = replace_all(line, "{{TITLE}}", title)
+    line = replace_all(line, "{{LANG}}", lang)
     line = replace_all(line, "{{NAV}}", nav)
     line = replace_all(line, "{{FOOTER}}", footer)
     line = replace_all(line, "{{CSS}}", style_path)

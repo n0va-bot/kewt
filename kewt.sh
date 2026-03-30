@@ -40,6 +40,8 @@ trap 'exit 0' HUP INT TERM
 
 DEFAULT_CONF='title = "kewt"
 style = "kewt"
+lang = "en"
+draft_by_default = false
 dir_indexes = true
 single_file_index = true
 flatten = false
@@ -66,7 +68,7 @@ posts_per_page = 12
 custom_admonitions = ""'
 
 DEFAULT_TMPL='<!doctype html>
-<html>
+<html lang="{{LANG}}">
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -145,9 +147,9 @@ create_new_post() {
 
     post_date_val="$(date "+%Y-%m-%d %H:%M")"
     if [ -n "$post_user_title" ]; then
-        printf -- '---\ntitle = "%s"\ndate = "%s"\ndraft = false\n---\n# %s\n' "$post_user_title" "$post_date_val" "$post_user_title" > "$file_path"
+        printf -- '---\ntitle = "%s"\ndate = "%s"\ndraft = %s\n---\n# %s\n' "$post_user_title" "$post_date_val" "$draft_by_default" "$post_user_title" > "$file_path"
     else
-        printf -- '---\ndate = "%s"\ndraft = false\n---\n' "$post_date_val" > "$file_path"
+        printf -- '---\ndate = "%s"\ndraft = %s\n---\n' "$post_date_val" "$draft_by_default" > "$file_path"
     fi
 
     echo "Created new post at '$file_path'."
@@ -420,6 +422,8 @@ generate_nav() {
 
 title="kewt"
 style="kewt"
+lang="en"
+draft_by_default="false"
 footer="made with <a href=\"https://kewt.krzak.org\">kewt</a>"
 dir_indexes="true"
 single_file_index="true"
@@ -498,6 +502,8 @@ load_config() {
             posts_dir) posts_dir="${val#/}" ;;
             posts_per_page) posts_per_page="$val" ;;
             custom_admonitions) custom_admonitions="$val" ;;
+            lang) lang="$val" ;;
+            draft_by_default) draft_by_default="$val" ;;
         esac
     done < "$1"
 }
@@ -757,7 +763,7 @@ render_markdown() {
         head_extra="$head_extra_og"
     fi
 
-    ENABLE_HEADER_LINKS="$enable_header_links" CUSTOM_ADMONITIONS="$custom_admonitions" MARKDOWN_SITE_ROOT="$src" MARKDOWN_FALLBACK_FILE="$script_dir/styles/$style.css" sh "$script_dir/markdown.sh" "$content_file" | AWK_CURRENT_URL="$current_url" AWK_TITLE="$page_title" AWK_NAV="$nav" AWK_FOOTER="$footer" AWK_STYLE_PATH="${style_path}${asset_version}" AWK_HEADER_BRAND="$header_brand" AWK_HEAD_EXTRA="$head_extra" awk -f "$awk_dir/render_template.awk" "$local_template"
+    ENABLE_HEADER_LINKS="$enable_header_links" CUSTOM_ADMONITIONS="$custom_admonitions" MARKDOWN_SITE_ROOT="$src" MARKDOWN_FALLBACK_FILE="$script_dir/styles/$style.css" sh "$script_dir/markdown.sh" "$content_file" | AWK_LANG="$lang" AWK_CURRENT_URL="$current_url" AWK_TITLE="$page_title" AWK_NAV="$nav" AWK_FOOTER="$footer" AWK_STYLE_PATH="${style_path}${asset_version}" AWK_HEADER_BRAND="$header_brand" AWK_HEAD_EXTRA="$head_extra" awk -f "$awk_dir/render_template.awk" "$local_template"
 }
 
 needs_rebuild() {
