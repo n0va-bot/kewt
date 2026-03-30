@@ -4,7 +4,7 @@ BEGIN {
 }
 
 {
-    if ($0 ~ /^<pre>/) in_pre = 1
+    if ($0 ~ /<pre>/) in_pre = 1
     
     if (in_pre) {
         if (in_p) { print "</p>"; in_p = 0 }
@@ -13,7 +13,16 @@ BEGIN {
         next
     }
 
-    if ($0 ~ /^<\/?(div|table|p|[ou]l|h[1-6]|[bh]r|blockquote|li|hr|section|article|nav|aside|header|footer|dl|dt|dd)/) {
+    if ($0 ~ /^<\/?(div|table|p|[ou]l|h[1-6]|[bh]r|blockquote|li|hr|section|article|nav|aside|header|footer|dl|dt|dd|script|style|iframe|details|summary|figure|figcaption|audio|video|picture)/) {
+        if (in_p) {
+            print "</p>"
+            in_p = 0
+        }
+        print
+        next
+    }
+
+    if ($0 ~ /^[\t ]*!([a-zA-Z])?\[[^\]]*\](\([^)]*\))?[\t ]*$/ || $0 ~ /^[\t ]*!!?\[[^\]]*\](\([^)]*\))?[\t ]*$/) {
         if (in_p) {
             print "</p>"
             in_p = 0
