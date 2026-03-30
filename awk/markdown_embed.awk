@@ -97,6 +97,23 @@ function read_file(path,    out, line, rc) {
     return out
 }
 
+function read_file_or_render_md(path, ext,    cmd, content, line, rc) {
+    content = ""
+    if (ext == "md") {
+        cmd = "sh \"" script_dir "/markdown.sh\" \"" path "\""
+        while ((cmd | getline line) > 0) {
+            content = content line "\n"
+        }
+        close(cmd)
+    } else {
+        while ((rc = getline line < path) > 0) {
+            content = content line "\n"
+        }
+        close(path)
+    }
+    return content
+}
+
 function escape_html(s,    t) {
     t = s
     gsub(/&/, "\\&amp;", t)
@@ -189,7 +206,8 @@ function render_embed(src, alt, has_alt, force_inline,    ext, local_path, conte
     if (force_inline && !is_global_url(src)) {
         local_path = resolve_local_path(src)
         if (local_path != "") {
-            content = read_file(local_path)
+            ext = ext_of(src)
+            content = read_file_or_render_md(local_path, ext)
             if (content ~ /\n$/) sub(/\n$/, "", content)
             return content
         }
@@ -217,7 +235,7 @@ function render_embed(src, alt, has_alt, force_inline,    ext, local_path, conte
     if (is_inline_text_ext(ext)) {
         local_path = resolve_local_path(src)
         if (local_path != "") {
-            content = read_file(local_path)
+            content = read_file_or_render_md(local_path, ext)
             if (content ~ /\n$/) sub(/\n$/, "", content)
             return content
         }
@@ -238,7 +256,7 @@ function render_typed_embed(etype, src, alt, has_alt,    local_path, content) {
         if (!is_global_url(src)) {
             local_path = resolve_local_path(src)
             if (local_path != "") {
-                content = read_file(local_path)
+                content = read_file_or_render_md(local_path, ext_of(src))
                 if (content ~ /\n$/) sub(/\n$/, "", content)
                 return content
             }

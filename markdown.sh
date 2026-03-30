@@ -77,5 +77,5 @@ awk -f "$awk_dir/paragraphs.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_fi
 # Inline styles
 awk -f "$awk_dir/emoji.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
 awk -f "$awk_dir/markdown_inline.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
-awk -v input_file="$1" -v site_root="$MARKDOWN_SITE_ROOT" -v fallback_file="$MARKDOWN_FALLBACK_FILE" -f "$awk_dir/markdown_embed.awk" "$temp_file"
+awk -v input_file="$1" -v site_root="$MARKDOWN_SITE_ROOT" -v fallback_file="$MARKDOWN_FALLBACK_FILE" -v script_dir="$script_dir" -f "$awk_dir/markdown_embed.awk" "$temp_file"
 rm "$temp_file"
