@@ -65,7 +65,8 @@ generate_feed = false
 feed_file = "rss.xml"
 posts_dir = ""
 posts_per_page = 12
-custom_admonitions = ""'
+custom_admonitions = ""
+cw_hide_url = true'
 
 DEFAULT_TMPL='<!doctype html>
 <html lang="{{LANG}}">
@@ -449,6 +450,7 @@ feed_file="rss.xml"
 posts_dir=""
 posts_per_page="12"
 custom_admonitions=""
+cw_hide_url="true"
 
 load_config() {
     [ -f "$1" ] || return
@@ -502,6 +504,7 @@ load_config() {
             posts_dir) posts_dir="${val#/}" ;;
             posts_per_page) posts_per_page="$val" ;;
             custom_admonitions) custom_admonitions="$val" ;;
+            cw_hide_url) cw_hide_url="$val" ;;
             lang) lang="$val" ;;
             draft_by_default) draft_by_default="$val" ;;
         esac
@@ -546,12 +549,14 @@ parse_frontmatter() {
     fm_date=""
     fm_draft=""
     fm_description=""
+    fm_content_warning=""
     while IFS='=' read -r _fk _fv; do
         case "$_fk" in
             title) fm_title="$_fv" ;;
             date) fm_date="$_fv" ;;
             draft) fm_draft="$_fv" ;;
             description) fm_description="$_fv" ;;
+            content_warning) fm_content_warning="$_fv" ;;
         esac
     done < "$_fm_out"
     rm -f "$_fm_out"
@@ -762,8 +767,39 @@ render_markdown() {
     else
         head_extra="$head_extra_og"
     fi
+    
+    if [ "$is_cw_content_page" = "true" ] && [ "$cw_hide_url" = "true" ]; then
+        head_extra="$head_extra
+        <script>window.history.replaceState(null, '', '$current_url');</script>"
+    fi
 
-    ENABLE_HEADER_LINKS="$enable_header_links" CUSTOM_ADMONITIONS="$custom_admonitions" MARKDOWN_SITE_ROOT="$src" MARKDOWN_FALLBACK_FILE="$script_dir/styles/$style.css" sh "$script_dir/markdown.sh" "$content_file" | AWK_LANG="$lang" AWK_CURRENT_URL="$current_url" AWK_TITLE="$page_title" AWK_NAV="$nav" AWK_FOOTER="$footer" AWK_STYLE_PATH="${style_path}${asset_version}" AWK_HEADER_BRAND="$header_brand" AWK_HEAD_EXTRA="$head_extra" awk -f "$awk_dir/render_template.awk" "$local_template"
+    ENABLE_HEADER_LINKS="$enable_header_links" CUSTOM_ADMONITIONS="$custom_admonitions" MARKDOWN_SITE_ROOT="$src" MARKDOWN_FALLBACK_FILE="$script_dir/styles/$style.css" sh "$script_dir/markdown.sh" "$content_file" | AWK_LANG="$lang" AWK_CURRENT_URL="$current_url" AWK_TITLE="$page_title" AWK_NAV="$nav" AWK_FOOTER="$footer" AWK_STYLE_PATH="${style_path}${asset_version}" AWK_HEADER_BRAND="$header_brand" AWK_HEAD_EXTRA="$head_extra" AWK_VERSION="$asset_version" AWK_CONTENT_WARNING="$fm_content_warning" awk -f "$awk_dir/render_template.awk" "$local_template"
+}
+
+generate_content_warning_page() {
+    _fm_title="$1"
+    _fm_content_warning="$2"
+    _content_rel_url="$3"
+    _target_url="$4"
+    _out_file="$5"
+    _is_home="$6"
+    
+    _temp_cw="$KEWT_TMPDIR/cw_$$.md"
+    _cw_text="${_fm_content_warning}"
+    [ "$_cw_text" = "true" ] && _cw_text="This content may be sensitive."
+    
+    cat <<EOF > "$_temp_cw"
+---
+title = "$_fm_title"
+---
+
+> [!CAUTION]
+> **Content Warning:** $_cw_text
+
+<a href="$(basename "$_content_rel_url")" class="cw-button">Reveal Content</a>
+EOF
+    render_markdown "$_temp_cw" "$_is_home" "$_target_url" > "$_out_file"
+    rm -f "$_temp_cw"
 }
 
 needs_rebuild() {
@@ -822,7 +858,20 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
                 target_url="/$rel_dir/index.html"
                 [ "$rel_dir" = "." ] && target_url="/index.html"
                 if needs_rebuild "$md_file" "$out_dir/index.html"; then
-                    render_markdown "$md_file" "$is_home" "$target_url" > "$out_dir/index.html"
+                    parse_frontmatter "$md_file"
+                    if [ -n "$fm_content_warning" ]; then
+                        content_out_file="$out_dir/content.html"
+                        content_rel_url="/$rel_dir/content.html"
+                        [ "$rel_dir" = "." ] && content_rel_url="/content.html"
+                        
+                        is_cw_content_page="true"
+                        render_markdown "$md_file" "$is_home" "$target_url" > "$content_out_file"
+                        is_cw_content_page="false"
+                        
+                        generate_content_warning_page "$fm_title" "$fm_content_warning" "$content_rel_url" "$target_url" "$out_dir/index.html" "false"
+                    else
+                        render_markdown "$md_file" "$is_home" "$target_url" > "$out_dir/index.html"
+                    fi
                 fi
                 continue
             fi
@@ -1012,7 +1061,25 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
             [ "$has_custom_index" = "true" ] && needs_rebuild "$dir/index.md" "$out_dir/index.html" && do_rebuild="true"
 
             if [ "$do_rebuild" = "true" ]; then
-                render_markdown "$temp_index" "$is_home" "$target_url" > "$out_dir/index.html"
+                if [ "$has_custom_index" = "true" ]; then
+                    parse_frontmatter "$dir/index.md"
+                else
+                    fm_content_warning=""
+                fi
+                
+                if [ -n "$fm_content_warning" ]; then
+                    content_out_file="$out_dir/content.html"
+                    content_rel_url="/$rel_dir/content.html"
+                    [ "$rel_dir" = "." ] && content_rel_url="/content.html"
+                    
+                    is_cw_content_page="true"
+                    render_markdown "$temp_index" "$is_home" "$target_url" > "$content_out_file"
+                    is_cw_content_page="false"
+                    
+                    generate_content_warning_page "$fm_title" "$fm_content_warning" "$content_rel_url" "$target_url" "$out_dir/index.html" "false"
+                else
+                    render_markdown "$temp_index" "$is_home" "$target_url" > "$out_dir/index.html"
+                fi
             fi
         fi
         rm -f "$temp_index" "$temp_list"
@@ -1061,7 +1128,19 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type f -print" | sort | while 
         is_home="false"; [ "$file" = "$src/index.md" ] && is_home="true"
         out_file="$out/${rel_path%.md}.html"
         if needs_rebuild "$file" "$out_file"; then
-            render_markdown "$file" "$is_home" > "$out_file"
+            if [ -n "$fm_content_warning" ]; then
+                content_out_file="$out/${rel_path%.md}-content.html"
+                content_rel_url="/${rel_path%.md}-content.html"
+                orig_rel_url="/${rel_path%.md}.html"
+                
+                is_cw_content_page="true"
+                render_markdown "$file" "$is_home" "$orig_rel_url" > "$content_out_file"
+                is_cw_content_page="false"
+                
+                generate_content_warning_page "$fm_title" "$fm_content_warning" "$content_rel_url" "$orig_rel_url" "$out_file" "false"
+            else
+                render_markdown "$file" "$is_home" > "$out_file"
+            fi
         fi
     else
         if needs_rebuild "$file" "$out/$rel_path"; then

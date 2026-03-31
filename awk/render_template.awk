@@ -17,6 +17,8 @@ BEGIN {
     head_extra = ENVIRON["AWK_HEAD_EXTRA"]
     header_brand = ENVIRON["AWK_HEADER_BRAND"]
     lang = ENVIRON["AWK_LANG"]
+    version = ENVIRON["AWK_VERSION"]
+    content_warning = ENVIRON["AWK_CONTENT_WARNING"]
     if (current_url != "") {
         nav = replace_all(nav, "href=\"" current_url "\"", "href=\"" current_url "\" class=\"current-page\"")
     }
@@ -31,6 +33,7 @@ BEGIN {
     line = replace_all(line, "{{CSS}}", style_path)
     line = replace_all(line, "{{HEAD_EXTRA}}", head_extra)
     line = replace_all(line, "{{HEADER_BRAND}}", header_brand)
+    line = replace_all(line, "{{VERSION}}", version)
 
     pos = index(line, "{{CONTENT}}")
     if (pos > 0) {

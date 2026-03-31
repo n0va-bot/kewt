@@ -218,6 +218,21 @@ pre code {
     background: var(--adm-caution-bg);
     border-color: var(--adm-caution-border);
 }
+.cw-button {
+    display: inline-block;
+    padding: 8px 16px;
+    background: var(--bg-deep);
+    border: 1px solid var(--code-border);
+    color: var(--fg);
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.cw-button:hover {
+    background: var(--fg);
+    color: var(--bg);
+    border-color: var(--fg);
+}
 
 footer {
     padding-top: 60px;
@@ -252,7 +267,8 @@ hr {
     border-top: 1px solid var(--code-border);
 }
 
-.nav-toggle, .nav-toggle-label {
+.nav-toggle,
+.nav-toggle-label {
     display: none;
 }
 
@@ -283,7 +299,7 @@ hr {
         margin: 0 20px 20px 20px;
     }
 
-    .nav-toggle:checked ~ #side-bar {
+    .nav-toggle:checked~#side-bar {
         display: block;
     }
 
