@@ -75,7 +75,7 @@ DEFAULT_TMPL='<!doctype html>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>{{TITLE}}</title>
 
-        <link rel="stylesheet" href="{{CSS}}" type="text/css" />
+        <link rel="stylesheet" href="{{CSS}}{{VERSION}}" type="text/css" />
         {{HEAD_EXTRA}}
     </head>
 

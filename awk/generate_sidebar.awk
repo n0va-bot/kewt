@@ -4,6 +4,46 @@ function title_from_name(name) {
     return name
 }
 
+function get_title(path, default_title,   full_path, line, title, in_fm) {
+    full_path = src "/" path
+    if (path !~ /\.md$/) {
+        full_path = full_path "/index.md"
+    }
+
+    title = ""
+    in_fm = 0
+    while ((getline line < full_path) > 0) {
+        if (line ~ /^---[[:space:]]*$/) {
+            if (in_fm == 0) {
+                in_fm = 1
+                continue
+            } else {
+                break
+            }
+        }
+        if (in_fm) {
+            if (line ~ /^[[:space:]]*title[[:space:]]*=/) {
+                sub(/^[[:space:]]*title[[:space:]]*=[[:space:]]*/, "", line)
+                if (line ~ /^".*"$/) {
+                    title = substr(line, 2, length(line) - 2)
+                } else if (line ~ /^'.*'$/) {
+                    title = substr(line, 2, length(line) - 2)
+                } else {
+                    title = line
+                }
+                break
+            }
+        } else {
+            break
+        }
+    }
+    close(full_path)
+
+    if (title != "") return title
+    return default_title
+}
+
+
 function compare_paths(p1, p2,    parts1, parts2, n1, n2, i, name1, name2, lname1, lname2, w1, w2) {
     n1 = split(p1, parts1, "/")
     n2 = split(p2, parts2, "/")
@@ -132,7 +172,7 @@ END {
                 continue
             }
 
-            printf "<li><a href=\"/%sindex.html\">%s</a><ul>\n", dir_path, title_from_name(parts[i])
+            printf "<li><a href=\"/%sindex.html\">%s</a><ul>\n", dir_path, get_title(this_d, title_from_name(parts[i]))
             opened_levels[++depth] = i
         }
 
@@ -145,7 +185,7 @@ END {
         if (parts[n] != "index.md" && !is_single) {
             path = "/" rel
             gsub(/\.md$/, ".html", path)
-            printf "<li><a href=\"%s\">%s</a></li>\n", path, title_from_name(parts[n])
+            printf "<li><a href=\"%s\">%s</a></li>\n", path, get_title(rel, title_from_name(parts[n]))
         }
 
         prev_n = n

@@ -1,23 +1,7 @@
-# Usage
-
-```sh
-kewt --help
-kewt --version
-kewt --new [title]
-kewt --post [title]
-kewt --generate-template [path]
-kewt --update [dir]
-kewt --from <src> --to <out>
-kewt [src] [out]
-kewt --watch
-kewt --serve [port]
-```
-- `--new [title]` creates a new site directory with a default `site.conf`, `template.html`, and `index.md`.
-- `--post [title]` creates a new markdown file in the configured `posts_dir` with the current date/time as the filename and default frontmatter.
-- `--generate-template [path]` writes the default `template.html` to the given path (defaults to `template.html` in the current directory).
-- `--update [dir]` adds any missing keys to `site.conf` and checks `template.html` against the latest default.
-- `--watch` (`-w`) watches for file changes in the source directory and rebuilds automatically.
-- `--serve` (`-s`) starts a local HTTP server (python3 or busybox) in the output directory after building. Use with the port number to specify the port. Composable with `--watch`.
+---
+title = "Configuration"
+---
+# Configuration
 
 ## site.conf
 
@@ -48,6 +32,7 @@ feed_file = "rss.xml"
 posts_dir = ""
 posts_per_page = 12
 custom_admonitions = ""
+cw_hide_url = true
 ```
 - `title` - site title
 - `style` - style file name from `./styles` (without `.css`)
@@ -75,3 +60,10 @@ custom_admonitions = ""
 - `posts_per_page` - number of posts per page in paginated post indexes (default: 12). Set to 0 to disable pagination.
 - `enable_header_links` - turns markdown section headings into clickable anchor links (default: true)
 - `custom_admonitions` - comma separated list of custom admonitions
+- `cw_hide_url` - embeds non-breaking JS to replace the URL in the browser bar on content warning pages (default: true)
+
+## Dot Files
+
+- `.kewtignore` - files/directories to ignore completely. If the file is empty, the whole directory gets ignored.
+- `.kewthide` - files/directories to hide from navigation but still process. Same empty-file rules as `.kewtignore`.
+- `.kewtpreserve` - files/directories to copy as-is without converting markdown to HTML. Same empty-file rules again.

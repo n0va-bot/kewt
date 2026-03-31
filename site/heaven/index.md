@@ -1,4 +1,5 @@
 ---
+title = "Heaven"
 content_warning = "This page may contain CSS"
 ---
 # Heaven

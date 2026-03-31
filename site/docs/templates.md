@@ -1,0 +1,15 @@
+---
+title = "Templates"
+---
+# Templates
+
+When customizing `template.html`, the placeholders available are:
+- `{{CONTENT}}` - the generated content
+- `{{TITLE}}` - the generated title
+- `{{NAV}}` - the generated navigation
+- `{{FOOTER}}` - the configured footer
+- `{{VERSION}}` - the cache-busting string from `versioning = true` (e.g. `?v=12345678`). Safe to use even if versioning is **disabled** (it will be empty).
+- `{{CSS}}` - the configured CSS file path
+- `{{LANG}}` - the configured document language
+- `{{HEAD_EXTRA}}` - meta-tags
+- `{{HEADER_BRAND}}` - header rendering the name and/or logo
