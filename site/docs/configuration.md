@@ -8,6 +8,8 @@ title = "Configuration"
 ```conf
 title = "kewt"
 style = "kewt"
+lang = "en"
+draft_by_default = false
 dir_indexes = true
 single_file_index = true
 flatten = false
@@ -33,9 +35,17 @@ posts_dir = ""
 posts_per_page = 12
 custom_admonitions = ""
 cw_hide_url = true
+generate_tags = false
+tags_dir = "tags"
+generate_search = false
+search_in_footer = false
+search_in_header = false
+include_cw_pages_in_search = false
 ```
 - `title` - site title
 - `style` - style file name from `./styles` (without `.css`)
+- `lang` - document language, used for the `<html lang="...">` attribute (default: "en")
+- `draft_by_default` - default value for the `draft` frontmatter field in new posts created (default: false)
 - `dir_indexes` - generate directory index pages when missing `index.md`
 - `single_file_index` - if a directory has one markdown file and no `index.md`, use that file as `index.html`
 - `flatten` - flatten sidebar directory levels
@@ -53,14 +63,20 @@ cw_hide_url = true
 - `generate_page_title` - automatically generate title text from the first markdown heading or filename (default: true)
 - `error_page` - filename for the generated 404 error page (default: "not_found.html", empty to disable)
 - `versioning` - append a version query parameter (`?v=timestamp`) to css asset urls to bypass cache (default: false)
+- `enable_header_links` - turns markdown section headings into clickable anchor links (default: true)
 - `base_url` - absolute URL of the site, used for sitemap and RSS feed generation
 - `generate_feed` - enable RSS feed generation (requires `base_url`)
 - `feed_file` - filename for the generated RSS feed (default: "rss.xml")
 - `posts_dir` - directory name containing posts (e.g., "posts"). Enables reverse-chronological sorting, title headings in indexes, and automatic backlinks.
 - `posts_per_page` - number of posts per page in paginated post indexes (default: 12). Set to 0 to disable pagination.
-- `enable_header_links` - turns markdown section headings into clickable anchor links (default: true)
 - `custom_admonitions` - comma separated list of custom admonitions
 - `cw_hide_url` - embeds non-breaking JS to replace the URL in the browser bar on content warning pages (default: true)
+- `generate_tags` - generate tag index pages from post frontmatter (requires `posts_dir`)
+- `tags_dir` - directory name for generated tag pages (default: "tags")
+- `generate_search` - generate a `search.json` index for client-side search
+- `search_in_footer` - include a search box in the page footer (requires `generate_search`)
+- `search_in_header` - include a search box in the page header (requires `generate_search`)
+- `include_cw_pages_in_search` - include content warning pages in the search index (default: false)
 
 ## Dot Files
 

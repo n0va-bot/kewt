@@ -13,3 +13,7 @@ When customizing `template.html`, the placeholders available are:
 - `{{LANG}}` - the configured document language
 - `{{HEAD_EXTRA}}` - meta-tags
 - `{{HEADER_BRAND}}` - header rendering the name and/or logo
+
+## Search
+
+When `generate_search` is enabled, kewt embeds a search bar into pages based on the `search_in_header` and `search_in_footer` config options. The search uses a `search.json` index generated at build time and a client-side JS script. No external dependencies are required.
