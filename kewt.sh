@@ -895,13 +895,16 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
             sort_args="-r"
         fi
 
-        find "$dir" ! -name "$(basename "$dir")" -prune ! -name ".*" -print | LC_ALL=C sort $sort_args | while read -r entry; do
+        temp_entries="$KEWT_TMPDIR/entries_$$.txt"
+        : > "$temp_entries"
+
+        find "$dir" ! -name "$(basename "$dir")" -prune ! -name ".*" -print | while read -r entry; do
             name="${entry##*/}"
             case "$name" in
                 template.html|site.conf|style.css|index.md) continue ;;
             esac
             if [ -d "$entry" ]; then
-                echo "- [${name}/](${name}/index.html)" >> "$temp_list"
+                echo "${name}|- [${name}/](${name}/index.html)" >> "$temp_entries"
             elif [ "${entry%.md}" != "$entry" ]; then
                 label="${name%.md}"
 
@@ -969,11 +972,19 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
                         label="$p_date $p_time"
                     fi
                 fi
-                echo "- [$label](${name%.md}.html)" >> "$temp_list"
+                if [ "$is_post_entry" = "true" ]; then
+                    sort_key="${p_date} ${p_time}"
+                else
+                    sort_key="$name"
+                fi
+                echo "${sort_key}|- [$label](${name%.md}.html)" >> "$temp_entries"
             else
-                echo "- [$name]($name)" >> "$temp_list"
+                echo "${name}|- [$name]($name)" >> "$temp_entries"
             fi
         done
+        
+        LC_ALL=C sort $sort_args "$temp_entries" | cut -d'|' -f2- >> "$temp_list"
+        rm -f "$temp_entries"
         
         is_home="false"; [ "$dir" = "$src" ] && is_home="true"
         target_url="/$rel_dir/index.html"
@@ -1198,7 +1209,31 @@ if [ "$generate_feed" = "true" ] && [ -n "$base_url" ]; then
         printf '    <lastBuildDate>%s</lastBuildDate>\n' "$build_date"
     } >> "$feed_path"
 
-    find "$src" -type f -name '*.md' -path "*${posts_dir:-__no_posts__}*" -print | LC_ALL=C sort -r | while IFS= read -r post_file; do
+    temp_feed_files="$KEWT_TMPDIR/feed_files_$$.txt"
+    : > "$temp_feed_files"
+
+    find "$src" -type f -name '*.md' -path "*${posts_dir:-__no_posts__}*" -print | while IFS= read -r post_file; do
+        post_basename=$(basename "$post_file" .md)
+        # Parse frontmatter to get date
+        parse_frontmatter "$post_file"
+        [ "$fm_draft" = "true" ] && continue
+        if [ -n "$fm_date" ]; then
+            post_date=$(echo "$fm_date" | sed 's/^\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\).*/\1/')
+            post_time="00:00"
+            if echo "$fm_date" | grep -q '^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}[ T_-]\?[0-9]\{2\}[:\-][0-9]\{2\}'; then
+                post_time=$(echo "$fm_date" | sed 's/^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}[ T_-]\?\([0-9]\{2\}[:\-][0-9]\{2\}\).*/\1/' | tr '-' ':')
+            fi
+        else
+            post_date=$(echo "$post_basename" | sed 's/^\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\).*/\1/')
+            post_time="00:00"
+            if echo "$post_basename" | grep -q '^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}-[0-9]\{2\}[:\-][0-9]\{2\}'; then
+                post_time=$(echo "$post_basename" | sed 's/^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}-\([0-9]\{2\}[:\-][0-9]\{2\}\).*/\1/' | tr '-' ':')
+            fi
+        fi
+        echo "${post_date} ${post_time}|${post_file}" >> "$temp_feed_files"
+    done
+
+    LC_ALL=C sort -r "$temp_feed_files" | cut -d'|' -f2- | while IFS= read -r post_file; do
         post_basename=$(basename "$post_file" .md)
 
         # Parse frontmatter
