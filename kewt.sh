@@ -21,6 +21,7 @@ src=""
 out=""
 new_mode="false"
 new_title=""
+clean_mode="true"
 post_mode="false"
 post_title=""
 positional_count=0
@@ -33,12 +34,18 @@ while [ $# -gt 0 ]; do
             usage
             exit 0
             ;;
-        --new)
+        --new|--init)
             new_mode="true"
             if [ $# -gt 1 ] && [ "${2#-}" = "$2" ]; then
                 new_title="$2"
                 shift
             fi
+            ;;
+        --no-clean)
+            clean_mode="false"
+            ;;
+        --clean)
+            clean_mode="true"
             ;;
         --version|-v)
             echo "kewt version git"
@@ -53,6 +60,9 @@ _kewt() {
         '--help[Show help message]'
         '(-h)--help[Show help message]'
         '(-)--new[Create a new site directory]'
+        '(-)--init[Create a new site directory (alias for --new)]'
+        '(-)--clean[Clean the output directory before building]'
+        '(-)--no-clean[Do not clean the output directory before building]'
         '(-)--update[Update site.conf and template.html with latest defaults]'
         '(-)--post[Create a new empty post file in the configured posts_dir]'
         '(-)--generate-template[Generate a new template file]'
@@ -264,7 +274,9 @@ if [ ! -f "$template" ]; then
     printf '%s\n' "$DEFAULT_TMPL" > "$template"
 fi
 
-[ -d "$out" ] && rm -rf "$out"
+if [ "$clean_mode" = "true" ]; then
+    [ -d "$out" ] && rm -rf "$out"
+fi
 mkdir -p "$out"
 
 nav=$(generate_nav "$src")

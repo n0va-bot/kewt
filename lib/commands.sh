@@ -12,7 +12,9 @@ Usage: $invoked_as [--from <src>] [--to <out>]
 
 Options:
   --help                     Show this help message.
-  --new [title]              Create a new site directory (default: site)
+  --new, --init [title]      Create a new site directory (default: site)
+  --clean                    Clean the output directory before building (default).
+  --no-clean                 Do not clean the output directory before building.
   --update [dir]             Update site.conf and template.html with latest defaults (defaults to current directory)
   --post                     Create a new empty post file in the configured posts_dir with current date and time as name
   --generate-template [path] Generate a new template file at <path> (default: template.html)
