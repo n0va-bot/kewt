@@ -41,5 +41,4 @@ It's meant to be a static site generator, like _[kew](https://github.com/uint23/
 
 ***
 
-> [!WARNING]
-> The base that all of this is built upon was coded at night, while sleepy and a bit sick, and after walking for about 4 hours around a forest, so...
+## [Quickstart guide](/docs/quickstart.html)
