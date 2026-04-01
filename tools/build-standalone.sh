@@ -28,10 +28,10 @@ EOF
 
 VERSION=$(git describe --tags 2>/dev/null || echo "standalone")
 tmpbuild=$(mktemp -d)
-cp -r "$REPO_ROOT/kewt.sh" "$REPO_ROOT/markdown.sh" "$REPO_ROOT/awk" "$REPO_ROOT/styles" "$tmpbuild/"
+cp -r "$REPO_ROOT/kewt.sh" "$REPO_ROOT/markdown.sh" "$REPO_ROOT/awk" "$REPO_ROOT/styles" "$REPO_ROOT/lib" "$tmpbuild/"
 sed -e "s/kewt version git/kewt version $VERSION/" "$tmpbuild/kewt.sh" > "$tmpbuild/kewt.sh.tmp" && mv "$tmpbuild/kewt.sh.tmp" "$tmpbuild/kewt.sh"
 chmod +x "$tmpbuild/kewt.sh" "$tmpbuild/markdown.sh"
-tar -cz -C "$tmpbuild" kewt.sh markdown.sh awk styles >> "$OUT_FILE"
+tar -cz -C "$tmpbuild" kewt.sh markdown.sh awk styles lib >> "$OUT_FILE"
 rm -rf "$tmpbuild"
 
 chmod +x "$OUT_FILE"
