@@ -39,3 +39,82 @@ This renders as `<dl><dt>Term</dt><dd>Definition</dd></dl>`. Multiple definition
 ## Emoji Shortcodes
 
 Standard GitHub/MkDocs emoji shortcodes like `:smile:`, `:fire:`, `:rocket:` are automatically replaced with their Unicode emoji equivalents. Shortcodes inside code blocks are left as-is.
+
+## Pipe Tables
+
+Tables use the GitHub-style syntax:
+
+```md
+| Header 1 | Header 2 |
+|---|---|
+| cell 1 | cell 2 |
+| cell 3 | cell 4 |
+```
+Column alignment is set with colons in the separator:
+
+```md
+| Left | Center | Right |
+|:---|:---:|---:|
+| a | b | c |
+```
+Tables can drop the header row and with a separator:
+
+```md
+|---|---|
+| a | b |
+```
+## Blockquotes
+
+Standard Markdown blockquote syntax using `>`:
+
+```md
+> This is a blockquote.
+> It can span multiple lines.
+```
+### Admonitions
+
+Blockquotes that start with a type tag become styled admonition blocks. Five built-in types are supported: `NOTE`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION`.
+
+```md
+> [!NOTE]
+> This is a note admonition.
+```
+Custom admonition types can be added via the `custom_admonitions` config option in `site.conf`.
+
+## Task Lists
+
+GFM-style task lists are supported inside **both** ordered and unordered lists:
+
+```md
+- [ ] Unchecked item
+- [x] Checked item
+- Normal item
+
+1. [ ] Unchecked item
+2. [x] Checked item
+3. Normal item
+```
+## Reference Links
+
+Markdown reference-style links and images are supported:
+
+```md
+[link text][ref]
+
+[ref]: https://example.com "Optional title"
+
+![alt text][img-ref]
+
+[img-ref]: /image.png "Optional title"
+```
+## Plain Text Blocks
+
+Content inside `<plain>...</plain>` tags is rendered without any Markdown processing
+
+## MFM Font Syntax
+
+Misskey-style font syntax is supported for inline font family changes:
+
+- `$[font.serif text]` - serif font
+- `$[font.mono text]` - monospace font
+- `$[font.sans text]` - sans-serif font

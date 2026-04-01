@@ -50,7 +50,7 @@ END {
     in_pre = 0
     i = 1
     while (i <= count) {
-        if (lines[i] ~ /^<pre><code>/) {
+        if (lines[i] ~ /^<pre><code/) {
             in_pre = 1
             print lines[i]
             i++
