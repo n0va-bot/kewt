@@ -13,6 +13,14 @@ title = "Embeds"
 
 If you want to **force** a file to be inlined, use `\!![]` instead of `\![]`
 
+## Reality-Breaking Embeds
+
+`\!![link]` and `\!![alt](link)` work even inside inline code blocks. If the content between backticks consists only of `\!![]` embeds, the embed triggers and the content is inlined instead of being rendered as code.
+
+```
+`!![/file.sh]`
+```
+
 ## Typed Embeds
 
 Force specific output regardless of extension:

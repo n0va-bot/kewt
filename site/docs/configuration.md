@@ -43,7 +43,7 @@ search_in_header = false
 include_cw_pages_in_search = false
 ```
 - `title` - site title
-- `style` - style file name from `./styles` (without `.css`)
+- `style` - style name from the built-in `styles/` directory. See [Theming](theming.md)
 - `lang` - document language, used for the `<html lang="...">` attribute (default: "en")
 - `draft_by_default` - default value for the `draft` frontmatter field in new posts created (default: false)
 - `dir_indexes` - generate directory index pages when missing `index.md`
