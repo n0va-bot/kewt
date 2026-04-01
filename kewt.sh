@@ -664,13 +664,27 @@ render_markdown() {
 
     content_file="$file"
     if [ -n "$posts_dir" ] && [ "$file" != "$src/$posts_dir/index.md" ]; then
-        dir_of_file=$(dirname "$file")
-        rel_dir_of_file="${dir_of_file#"$src"}"
-        rel_dir_of_file="${rel_dir_of_file#/}"
-        if [ "$rel_dir_of_file" = "$posts_dir" ]; then
-             temp_post_with_backlink="$KEWT_TMPDIR/post_with_backlink.md"
+        rel_dir_of_url=$(dirname "$current_url")
+        rel_dir_of_url="${rel_dir_of_url#/}"
+        if { [ "$rel_dir_of_url" = "$posts_dir" ] || [ "./$rel_dir_of_url" = "$posts_dir" ]; } && [ "$(basename "$current_url")" != "index.html" ]; then
+             temp_post_with_backlink="$KEWT_TMPDIR/post_with_backlink_$$.md"
              printf "[< Back](index.html)\n\n" > "$temp_post_with_backlink"
              awk -f "$awk_dir/frontmatter.awk" "$file" >> "$temp_post_with_backlink"
+             
+             post_md_name="$(basename "$current_url" .html).md"
+             prevnext_file="$KEWT_TMPDIR/prevnext/$post_md_name"
+             if [ -f "$prevnext_file" ]; then
+                 IFS='|' read -r prev_str next_str < "$prevnext_file"
+                 
+                 printf "\n\n---\n<div class=\"post-nav\">\n" >> "$temp_post_with_backlink"
+                 if [ -n "$prev_str" ]; then
+                     printf "<span class=\"prev-post\">%s</span>\n" "$prev_str" >> "$temp_post_with_backlink"
+                 fi
+                 if [ -n "$next_str" ]; then
+                     printf "<span class=\"next-post\">%s</span>\n" "$next_str" >> "$temp_post_with_backlink"
+                 fi
+                 printf "</div>\n" >> "$temp_post_with_backlink"
+             fi
              content_file="$temp_post_with_backlink"
         fi
     fi
@@ -773,7 +787,7 @@ render_markdown() {
         <script>window.history.replaceState(null, '', '$current_url');</script>"
     fi
 
-    ENABLE_HEADER_LINKS="$enable_header_links" CUSTOM_ADMONITIONS="$custom_admonitions" MARKDOWN_SITE_ROOT="$src" MARKDOWN_FALLBACK_FILE="$script_dir/styles/$style.css" sh "$script_dir/markdown.sh" "$content_file" | AWK_LANG="$lang" AWK_CURRENT_URL="$current_url" AWK_TITLE="$page_title" AWK_NAV="$nav" AWK_FOOTER="$footer" AWK_STYLE_PATH="${style_path}${asset_version}" AWK_HEADER_BRAND="$header_brand" AWK_HEAD_EXTRA="$head_extra" AWK_VERSION="$asset_version" AWK_CONTENT_WARNING="$fm_content_warning" awk -f "$awk_dir/render_template.awk" "$local_template"
+    ENABLE_HEADER_LINKS="$enable_header_links" CUSTOM_ADMONITIONS="$custom_admonitions" MARKDOWN_SITE_ROOT="$src" MARKDOWN_FALLBACK_FILE="$script_dir/styles/$style.css" sh "$script_dir/markdown.sh" "$content_file" | AWK_LANG="$lang" AWK_CURRENT_URL="$current_url" AWK_TITLE="$page_title" AWK_NAV="$nav" AWK_FOOTER="$footer" AWK_STYLE_PATH="${style_path}" AWK_HEADER_BRAND="$header_brand" AWK_HEAD_EXTRA="$head_extra" AWK_VERSION="$asset_version" AWK_CONTENT_WARNING="$fm_content_warning" awk -f "$awk_dir/render_template.awk" "$local_template"
 }
 
 generate_content_warning_page() {
@@ -977,13 +991,42 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
                 else
                     sort_key="$name"
                 fi
-                echo "${sort_key}|- [$label](${name%.md}.html)" >> "$temp_entries"
+                echo "${sort_key}|- [$label](${name%.md}.html)|$name|${name%.md}.html" >> "$temp_entries"
             else
-                echo "${name}|- [$name]($name)" >> "$temp_entries"
+                echo "${name}|- [$name]($name)|$name|$name" >> "$temp_entries"
             fi
         done
         
-        LC_ALL=C sort $sort_args "$temp_entries" | cut -d'|' -f2- >> "$temp_list"
+        if [ "$is_posts_dir" = "true" ]; then
+            LC_ALL=C sort $sort_args "$temp_entries" > "$KEWT_TMPDIR/sorted_entries_$$.txt"
+            cut -d'|' -f2 "$KEWT_TMPDIR/sorted_entries_$$.txt" >> "$temp_list"
+            mkdir -p "$KEWT_TMPDIR/prevnext"
+            awk -F'|' '
+            {
+               name[NR] = $3
+               url[NR] = $4
+            }
+            END {
+               for(i=1; i<=NR; i++) {
+                  prev_str = ""
+                  next_str = ""
+                  if(i > 1) {
+                     next_str = "[Next >](" url[i-1] ")"
+                  }
+                  if(i < NR) {
+                     prev_str = "[< Previous](" url[i+1] ")"
+                  }
+                  if (prev_str != "" || next_str != "") {
+                      out = "'"$KEWT_TMPDIR"'/prevnext/" name[i]
+                      printf "%s|%s\n", prev_str, next_str > out
+                  }
+               }
+            }
+            ' "$KEWT_TMPDIR/sorted_entries_$$.txt"
+            rm -f "$KEWT_TMPDIR/sorted_entries_$$.txt"
+        else
+            LC_ALL=C sort $sort_args "$temp_entries" | cut -d'|' -f2 >> "$temp_list"
+        fi
         rm -f "$temp_entries"
         
         is_home="false"; [ "$dir" = "$src" ] && is_home="true"
@@ -1070,6 +1113,16 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
             do_rebuild="false"
             needs_rebuild "$dir" "$out_dir/index.html" && do_rebuild="true"
             [ "$has_custom_index" = "true" ] && needs_rebuild "$dir/index.md" "$out_dir/index.html" && do_rebuild="true"
+
+            if [ "$do_rebuild" = "false" ] && [ -f "$out_dir/index.html" ]; then
+                for _child in "$dir"/*; do
+                    [ -e "$_child" ] || continue
+                    if [ "$_child" -nt "$out_dir/index.html" ]; then
+                        do_rebuild="true"
+                        break
+                    fi
+                done
+            fi
 
             if [ "$do_rebuild" = "true" ]; then
                 if [ "$has_custom_index" = "true" ]; then
