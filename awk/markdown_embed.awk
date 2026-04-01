@@ -140,18 +140,18 @@ function css_highlight_line(line,    m, prop, val) {
         match(line, /:[[:space:]]*/)
         sep_pos = RSTART
         sep_len = RLENGTH
-        
+
         pre_sep = substr(line, 1, sep_pos - 1)
         sep = substr(line, sep_pos, sep_len)
         post_sep = substr(line, sep_pos + sep_len)
-        
+
         match(pre_sep, /--?[A-Za-z0-9_-]+/)
         prop_pos = RSTART
         prop_len = RLENGTH
-        
+
         indent = substr(pre_sep, 1, prop_pos - 1)
         prop_name = substr(pre_sep, prop_pos, prop_len)
-        
+
         if (match(post_sep, /;[[:space:]]*$/)) {
             val_part = substr(post_sep, 1, RSTART - 1)
             suffix = substr(post_sep, RSTART)
@@ -159,11 +159,11 @@ function css_highlight_line(line,    m, prop, val) {
             val_part = post_sep
             suffix = ""
         }
-        
+
         prop = "<span class=\"tok-prop\">" prop_name "</span>"
         gsub(/var\(--[A-Za-z0-9_-]+\)/, "<span class=\"tok-var\">&</span>", val_part)
         val = "<span class=\"tok-val\">" val_part "</span>"
-        
+
         return indent prop sep val suffix
     }
 

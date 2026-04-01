@@ -30,7 +30,7 @@ BEGIN {
         # get indentation level
         match(line, /^[ \t]*/)
         indent = RLENGTH
-        
+
         if (depth == 0 || indent > cur_indent[depth]) {
             depth++
             cur_indent[depth] = indent

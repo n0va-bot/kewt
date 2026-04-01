@@ -18,17 +18,17 @@ BEGIN {
         if (title_end > 0) {
             title = substr(title_str, 1, title_end - 1)
             gsub(/<[^>]+>/, "", title)
-            
+
             # extract id
             id_start = match($0, /id="[^"]*"/)
             if (id_start > 0) {
                 id_str = substr($0, id_start + 4)
                 id_end = index(id_str, "\"")
                 id = substr(id_str, 1, id_end - 1)
-                
+
                 # what tag? level
                 level = substr($0, match($0, /<h[23]/) + 2, 1)
-                
+
                 if (level == "2") {
                     toc_str = toc_str "<li class=\"toc-h2\"><a href=\"#" id "\">" title "</a></li>\n"
                 } else if (level == "3") {

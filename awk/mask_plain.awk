@@ -56,7 +56,7 @@ BEGIN { in_plain = 0; in_script_style = 0 }
             script_start = RSTART; script_len = RLENGTH
             pos_style = match(tolower(tmp_line), /<style([ >]|$)/)
             style_start = RSTART; style_len = RLENGTH
-            
+
             if (pos_script == 0 && pos_style == 0) {
                 out2 = out2 tmp_line
                 break

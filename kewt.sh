@@ -320,10 +320,40 @@ if [ "$watch_mode" = "true" ]; then
         [ -z "$changed" ] && [ -f "$src/site.conf" ] && [ "$src/site.conf" -nt "$KEWT_TMPDIR/watch_mark" ] && changed="$src/site.conf"
         [ -z "$changed" ] && [ -f "$template" ] && [ "$template" -nt "$KEWT_TMPDIR/watch_mark" ] && changed="$template"
         [ -z "$changed" ] && [ -d "$script_dir/styles" ] && changed="$(find "$script_dir/styles" -type f -newer "$KEWT_TMPDIR/watch_mark" 2>/dev/null | head -n 1)"
-        
+
         if [ -n "$changed" ]; then
             echo ""
             echo "Change detected, rebuilding..."
+            if [ "$clean_mode" = "true" ]; then
+                find "$out" -mindepth 1 -delete 2>/dev/null
+            fi
+
+            load_config "./site.conf"
+            load_config "$src/site.conf"
+
+            asset_version=""
+            if [ "$versioning" = "true" ]; then
+                asset_version="?v=$(date +%s)"
+            fi
+
+            template="$src/template.html"
+            [ -f "$template" ] || template="./template.html"
+            if [ ! -f "$template" ]; then
+                template="$KEWT_TMPDIR/default_template.html"
+                printf '%s\n' "$DEFAULT_TMPL" > "$template"
+            fi
+
+            nav=$(generate_nav "$src")
+            extra_links=$(nav_links_html)
+            if [ -n "$extra_links" ]; then
+                nav="$nav
+$extra_links"
+            fi
+            if [ -n "$nav_extra" ]; then
+                nav="$nav
+$nav_extra"
+            fi
+
             build_site
             touch "$KEWT_TMPDIR/watch_mark"
         fi

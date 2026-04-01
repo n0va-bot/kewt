@@ -7,6 +7,8 @@ needs_rebuild() {
     [ -f "$src/site.conf" ] && [ "$src/site.conf" -nt "$out_file" ] && return 0
     [ -f "$template" ] && [ "$template" -nt "$out_file" ] && return 0
     [ -f "$script_dir/styles/$style.css" ] && [ "$script_dir/styles/$style.css" -nt "$out_file" ] && return 0
+    [ -f "$script_dir/styles/$style.root.css" ] && [ "$script_dir/styles/$style.root.css" -nt "$out_file" ] && return 0
+    [ -f "$src/styles.root.css" ] && [ "$src/styles.root.css" -nt "$out_file" ] && return 0
     return 1
 }
 
@@ -59,11 +61,11 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
                         content_out_file="$out_dir/content.html"
                         content_rel_url="/$rel_dir/content.html"
                         [ "$rel_dir" = "." ] && content_rel_url="/content.html"
-                        
+
                         is_cw_content_page="true"
                         render_markdown "$md_file" "$is_home" "$target_url" > "$content_out_file"
                         is_cw_content_page="false"
-                        
+
                         generate_content_warning_page "$fm_title" "$fm_content_warning" "$content_rel_url" "$target_url" "$out_dir/index.html" "false"
                     else
                         render_markdown "$md_file" "$is_home" "$target_url" > "$out_dir/index.html"
@@ -97,7 +99,7 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
         find "$dir" ! -name "$(basename "$dir")" -prune ! -name ".*" -print | while read -r entry; do
             name="${entry##*/}"
             case "$name" in
-                template.html|site.conf|style.css|index.md) continue ;;
+                template.html|site.conf|style.css|styles.root.css|index.md) continue ;;
             esac
             if [ -d "$entry" ]; then
                 echo "${name}|- [${name}/](${name}/index.html)" >> "$temp_entries"
@@ -178,7 +180,7 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
                 echo "${name}|- [$name]($name)|$name|$name" >> "$temp_entries"
             fi
         done
-        
+
         if [ "$is_posts_dir" = "true" ]; then
             LC_ALL=C sort $sort_args "$temp_entries" > "$KEWT_TMPDIR/sorted_entries_$$.txt"
             cut -d'|' -f2 "$KEWT_TMPDIR/sorted_entries_$$.txt" >> "$temp_list"
@@ -210,7 +212,7 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
             LC_ALL=C sort $sort_args "$temp_entries" | cut -d'|' -f2 >> "$temp_list"
         fi
         rm -f "$temp_entries"
-        
+
         is_home="false"; [ "$dir" = "$src" ] && is_home="true"
         target_url="/$rel_dir/index.html"
         [ "$rel_dir" = "." ] && target_url="/index.html"
@@ -312,16 +314,16 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
                 else
                     fm_content_warning=""
                 fi
-                
+
                 if [ -n "$fm_content_warning" ]; then
                     content_out_file="$out_dir/content.html"
                     content_rel_url="/$rel_dir/content.html"
                     [ "$rel_dir" = "." ] && content_rel_url="/content.html"
-                    
+
                     is_cw_content_page="true"
                     render_markdown "$temp_index" "$is_home" "$target_url" > "$content_out_file"
                     is_cw_content_page="false"
-                    
+
                     generate_content_warning_page "$fm_title" "$fm_content_warning" "$content_rel_url" "$target_url" "$out_dir/index.html" "false"
                 else
                     render_markdown "$temp_index" "$is_home" "$target_url" > "$out_dir/index.html"
@@ -332,8 +334,23 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
     fi
 done
 
-if [ -f "$script_dir/styles/$style.css" ] && needs_rebuild "$script_dir/styles/$style.css" "$out/styles.css"; then
-    copy_style_with_resolved_vars "$script_dir/styles/$style.css" "$out/styles.css"
+if [ ! -f "$src/styles.css" ] && [ ! -f "$src/style.css" ]; then
+    if [ -f "$src/styles.root.css" ]; then
+        _base_css="$script_dir/styles/$style.css"
+        [ ! -f "$_base_css" ] && _base_css="$script_dir/styles/kewt.css"
+        if [ ! -f "$out/styles.css" ] || [ "$src/styles.root.css" -nt "$out/styles.css" ] || [ "$_base_css" -nt "$out/styles.css" ]; then
+            merge_root_style "$src/styles.root.css" "$_base_css" "$out/styles.css"
+        fi
+    elif [ -f "$script_dir/styles/$style.css" ]; then
+        if needs_rebuild "$script_dir/styles/$style.css" "$out/styles.css"; then
+            copy_style_with_resolved_vars "$script_dir/styles/$style.css" "$out/styles.css"
+        fi
+    elif [ -f "$script_dir/styles/$style.root.css" ]; then
+        _base_css="$script_dir/styles/kewt.css"
+        if [ ! -f "$out/styles.css" ] || [ "$script_dir/styles/$style.root.css" -nt "$out/styles.css" ] || [ "$_base_css" -nt "$out/styles.css" ]; then
+            merge_root_style "$script_dir/styles/$style.root.css" "$_base_css" "$out/styles.css"
+        fi
+    fi
 fi
 
 eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type f -print" | sort | while IFS= read -r file; do
@@ -343,7 +360,7 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type f -print" | sort | while 
     out_dir="$out/$dir_rel"
 
     case "${file##*/}" in
-        template.html|site.conf|style.css|styles.css) continue ;;
+        template.html|site.conf|style.css|styles.css|styles.root.css) continue ;;
     esac
 
     if [ "${file##*/}" = "index.md" ] && grep -q '^[[:space:]]*{{LIST}}[[:space:]]*$' "$file" 2>/dev/null; then
@@ -378,11 +395,11 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type f -print" | sort | while 
                 content_out_file="$out/${rel_path%.md}-content.html"
                 content_rel_url="/${rel_path%.md}-content.html"
                 orig_rel_url="/${rel_path%.md}.html"
-                
+
                 is_cw_content_page="true"
                 render_markdown "$file" "$is_home" "$orig_rel_url" > "$content_out_file"
                 is_cw_content_page="false"
-                
+
                 generate_content_warning_page "$fm_title" "$fm_content_warning" "$content_rel_url" "$orig_rel_url" "$out_file" "false"
             else
                 render_markdown "$file" "$is_home" > "$out_file"
@@ -589,7 +606,7 @@ if [ "$generate_search" = "true" ] || [ "$generate_tags" = "true" ]; then
 
         parse_frontmatter "$md_file"
         [ "$fm_draft" = "true" ] && continue
-        
+
         md_heading="$fm_title"
         if [ -z "$md_heading" ]; then
             md_heading=$(grep -m 1 '^# ' "$md_file" | sed 's/^# *//; s/ *$//')
@@ -605,7 +622,7 @@ if [ "$generate_search" = "true" ] || [ "$generate_tags" = "true" ]; then
                 md_heading="$title - Page"
             fi
         fi
- 
+
         if [ "$generate_search" = "true" ]; then
             if [ -z "$fm_content_warning" ] || [ "$include_cw_pages_in_search" = "true" ]; then
                 md_content=$(awk '{
@@ -674,30 +691,30 @@ if [ "$generate_search" = "true" ] || [ "$generate_tags" = "true" ]; then
     if [ "$generate_tags" = "true" ]; then
         tags_out_dir="$out/$tags_dir"
         mkdir -p "$tags_out_dir"
-        
+
         tags_index_md="$KEWT_TMPDIR/tags_index_$$.md"
         echo "# Tags" > "$tags_index_md"
         echo "" >> "$tags_index_md"
 
         cut -d'|' -f1 "$temp_tags" | sort -u | while IFS= read -r tag; do
             tag_slug=$(echo "$tag" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g')
-            
+
             echo "- [$tag](/$(echo $tags_dir | sed 's|^\/||; s|\/$||')/$tag_slug.html)" >> "$tags_index_md"
-            
+
             tag_page_md="$KEWT_TMPDIR/tag_page_$$.md"
             echo "# Tag: $tag" > "$tag_page_md"
             echo "" >> "$tag_page_md"
             echo "Posts tagged with **$tag**:" >> "$tag_page_md"
             echo "" >> "$tag_page_md"
-            
+
             grep "^${tag}|" "$temp_tags" | while IFS='|' read -r _t t_url t_title; do
                 echo "- [$t_title]($t_url)" >> "$tag_page_md"
             done
-            
+
             render_markdown "$tag_page_md" "false" "/$tags_dir/$tag_slug.html" > "$tags_out_dir/$tag_slug.html"
             rm -f "$tag_page_md"
         done
-        
+
         render_markdown "$tags_index_md" "false" "/$tags_dir/index.html" > "$tags_out_dir/index.html"
         rm -f "$tags_index_md"
     fi

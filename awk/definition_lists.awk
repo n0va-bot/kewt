@@ -8,7 +8,7 @@ BEGIN {
     if ($0 ~ /^<pre>/) {
         if (!in_pre) in_pre = 1
     }
-    
+
     if (!in_pre && $0 ~ /^:[ \t]+[^ \t]/) {
         if (!in_dl) {
             in_dl = 1
@@ -24,7 +24,7 @@ BEGIN {
         def_text = $0
         sub(/^:[ \t]+/, "", def_text)
         print "<dd>" def_text "</dd>"
-        
+
         if ($0 ~ /<\/pre>/) {
             if (in_pre) in_pre = 0
         }
@@ -46,7 +46,7 @@ BEGIN {
         prev_line = $0
         has_prev = 1
     }
-    
+
     if ($0 ~ /<\/pre>/) {
         if (in_pre) in_pre = 0
     }

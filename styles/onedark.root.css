@@ -1,0 +1,26 @@
+:root {
+    --bg: #282c34;
+    --bg-deep: #21252b;
+    --fg: #abb2bf;
+    --fg-muted: #636d83;
+    --fg-link: #61afef;
+    --fg-heading: #c8ccd4;
+    --code-bg: #21252b;
+    --code-border: #3e4451;
+    --code-fg: #abb2bf;
+    --code-sel: #e5c07b;
+    --code-prop: #e06c75;
+    --code-val: #56b6c2;
+    --code-var: #98c379;
+    --code-com: #5c6370;
+    --adm-note-bg: #2c313c;
+    --adm-note-border: #61afef;
+    --adm-tip-bg: #2c3a30;
+    --adm-tip-border: #98c379;
+    --adm-important-bg: #33303c;
+    --adm-important-border: #c678dd;
+    --adm-warning-bg: #3a352c;
+    --adm-warning-border: #e5c07b;
+    --adm-caution-bg: #3a2c2e;
+    --adm-caution-border: #e06c75;
+}

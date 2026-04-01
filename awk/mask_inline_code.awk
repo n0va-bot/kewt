@@ -46,14 +46,9 @@ function mask(s,    t) {
     while (match(substr(line, p), /`+/)) {
         pstart = p + RSTART - 1
         plen = RLENGTH
-        if (plen >= 3) {
-            out = out substr(line, p, pstart - p + plen)
-            p = pstart + plen
-            continue
-        }
 
-        # Found 1 or 2 backticks at pstart
-        # Search for closing marker
+        # Found backtick sequence at pstart
+        # Search for closing marker of same length
         marker = substr(line, pstart, plen)
         tail = substr(line, pstart + plen)
         mpos = index(tail, marker)
@@ -65,11 +60,11 @@ function mask(s,    t) {
                 p = pstart + plen
                 continue
             }
-            
+
             # Found match!
             content = substr(tail, 1, mpos - 1)
             out = out substr(line, p, pstart - p)
-            if (plen == 2 && substr(content, 1, 1) == " " && substr(content, length(content), 1) == " ") {
+            if (plen >= 2 && substr(content, 1, 1) == " " && substr(content, length(content), 1) == " ") {
                 content = substr(content, 2, length(content) - 2)
             }
             out = out "<code>" mask(content) "</code>"

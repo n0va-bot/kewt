@@ -3,5 +3,7 @@
   "description": "A minimalist static site generator inspired by werc",
   "global": "true",
   "install": "make install",
-  "scripts": ["kewt"]
+  "scripts": [
+    "kewt"
+  ]
 }

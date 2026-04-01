@@ -109,6 +109,27 @@ copy_style_with_resolved_vars() {
     out_style="$2"
     awk -f "$awk_dir/replace_variables.awk" "$src_style" > "$out_style"
 }
+merge_root_style() {
+    root_file="$1"
+    base_css="$2"
+    out_file="$3"
+    {
+        cat "$root_file"
+        awk '
+            BEGIN { in_root = 0; brace_depth = 0 }
+            /^:root[[:space:]]*\{/ { in_root = 1; brace_depth = 1; next }
+            in_root {
+                for (i = 1; i <= length($0); i++) {
+                    c = substr($0, i, 1)
+                    if (c == "{") brace_depth++
+                    if (c == "}") { brace_depth--; if (brace_depth == 0) { in_root = 0; next } }
+                }
+                next
+            }
+            { print }
+        ' "$base_css"
+    } | awk -f "$awk_dir/replace_variables.awk" > "$out_file"
+}
 render_markdown() {
     file="$1"
     is_home="$2"
@@ -130,12 +151,12 @@ render_markdown() {
              temp_post_with_backlink="$KEWT_TMPDIR/post_with_backlink_$$.md"
              printf "[< Back](index.html)\n\n" > "$temp_post_with_backlink"
              awk -f "$awk_dir/frontmatter.awk" "$file" >> "$temp_post_with_backlink"
-             
+
              post_md_name="$(basename "$current_url" .html).md"
              prevnext_file="$KEWT_TMPDIR/prevnext/$post_md_name"
              if [ -f "$prevnext_file" ]; then
                  IFS='|' read -r prev_str next_str < "$prevnext_file"
-                 
+
                  printf "\n\n---\n<div class=\"post-nav\">\n" >> "$temp_post_with_backlink"
                  if [ -n "$prev_str" ]; then
                      printf "<span class=\"prev-post\">%s</span>\n" "$prev_str" >> "$temp_post_with_backlink"
@@ -241,7 +262,7 @@ render_markdown() {
     else
         head_extra="$head_extra_og"
     fi
-    
+
     if [ "$is_cw_content_page" = "true" ] && [ "$cw_hide_url" = "true" ]; then
         head_extra="$head_extra
         <script>window.history.replaceState(null, '', '$current_url');</script>"
@@ -269,11 +290,11 @@ generate_content_warning_page() {
     _target_url="$4"
     _out_file="$5"
     _is_home="$6"
-    
+
     _temp_cw="$KEWT_TMPDIR/cw_$$.md"
     _cw_text="${_fm_content_warning}"
     [ "$_cw_text" = "true" ] && _cw_text="This content may be sensitive."
-    
+
     cat <<EOF > "$_temp_cw"
 ---
 title = "$_fm_title"

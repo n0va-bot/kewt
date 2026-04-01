@@ -5,7 +5,7 @@ BEGIN {
 
 {
     if ($0 ~ /<pre>/) in_pre = 1
-    
+
     if (in_pre) {
         if (in_p) { print "</p>"; in_p = 0 }
         print
