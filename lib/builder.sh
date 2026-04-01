@@ -589,7 +589,6 @@ if [ "$generate_search" = "true" ] || [ "$generate_tags" = "true" ]; then
 
         parse_frontmatter "$md_file"
         [ "$fm_draft" = "true" ] && continue
-        [ -n "$fm_content_warning" ] && continue
         
         md_heading="$fm_title"
         if [ -z "$md_heading" ]; then
@@ -606,16 +605,17 @@ if [ "$generate_search" = "true" ] || [ "$generate_tags" = "true" ]; then
                 md_heading="$title - Page"
             fi
         fi
-
+ 
         if [ "$generate_search" = "true" ]; then
-            md_content=$(awk '{
-                if (NR == 1 && $0 == "---") { in_fm = 1; next }
-                if (in_fm && $0 == "---") { in_fm = 0; next }
-                if (in_fm) next
-                if ($0 ~ /^```/) { in_code = !in_code; next }
-                if (in_code) next
-                print
-            }' "$md_file" | sed \
+            if [ -z "$fm_content_warning" ] || [ "$include_cw_pages_in_search" = "true" ]; then
+                md_content=$(awk '{
+                    if (NR == 1 && $0 == "---") { in_fm = 1; next }
+                    if (in_fm && $0 == "---") { in_fm = 0; next }
+                    if (in_fm) next
+                    if ($0 ~ /^```/) { in_code = !in_code; next }
+                    if (in_code) next
+                    print
+                }' "$md_file" | sed \
                 -e 's/^#\{1,6\} //' \
                 -e 's/\*\*\([^*]*\)\*\*/\1/g' \
                 -e 's/\*\([^*]*\)\*/\1/g' \
@@ -637,6 +637,7 @@ if [ "$generate_search" = "true" ] || [ "$generate_tags" = "true" ]; then
             fi
             printf '  {"url": "%s", "title": "%s", "content": "%s"}' "$md_url" "$md_heading" "$md_content" >> "$out/search.json"
             first_search_item="false"
+            fi
         fi
 
         if [ "$generate_tags" = "true" ] && [ -n "$fm_tags" ]; then

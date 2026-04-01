@@ -31,7 +31,8 @@ generate_tags = false
 tags_dir = "tags"
 generate_search = false
 search_in_footer = false
-search_in_header = false'
+search_in_header = false
+include_cw_pages_in_search = false'
 
 DEFAULT_TMPL='<!doctype html>
 <html lang="{{LANG}}">
@@ -93,6 +94,7 @@ tags_dir="tags"
 generate_search="false"
 search_in_footer="false"
 search_in_header="false"
+include_cw_pages_in_search="false"
 
 load_config() {
     [ -f "$1" ] || return
@@ -154,6 +156,7 @@ load_config() {
             generate_search) generate_search="$val" ;;
             search_in_footer) search_in_footer="$val" ;;
             search_in_header) search_in_header="$val" ;;
+            include_cw_pages_in_search) include_cw_pages_in_search="$val" ;;
         esac
     done < "$1"
 }
