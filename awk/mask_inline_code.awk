@@ -67,6 +67,17 @@ function mask(s,    t) {
             if (plen >= 2 && substr(content, 1, 1) == " " && substr(content, length(content), 1) == " ") {
                 content = substr(content, 2, length(content) - 2)
             }
+            if (content ~ /!!\[/) {
+                _rb_test = content
+                gsub(/!!\[[^\]]*\]\([^)]*\)/, "", _rb_test)
+                gsub(/!!\[[^\]]+\]/, "", _rb_test)
+                gsub(/[[:space:]]+/, "", _rb_test)
+                if (_rb_test == "") {
+                    out = out content
+                    p = pstart + plen + mpos + plen - 1
+                    continue
+                }
+            }
             out = out "<code>" mask(content) "</code>"
             p = pstart + plen + mpos + plen - 1
         } else {

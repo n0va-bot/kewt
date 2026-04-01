@@ -375,6 +375,13 @@ function rewrite_img_tags(line,    out, rest, tag, src, alt, force_inline_tag, e
         } else if (is_image_ext(ext_of(src)) && force_inline_tag == "") {
             # Preserve hand-written <img> attributes (style/class/etc) for normal images.
             repl = tag
+        } else if (force_inline_tag != "" && !is_global_url(src) && is_inline_text_ext(ext_of(src))) {
+            repl = render_code_include(src, 1)
+            if (repl != "") {
+                repl = "<pre><code>" repl "</code></pre>"
+            } else {
+                repl = render_embed(src, alt, (alt != ""), 1)
+            }
         } else {
             repl = render_embed(src, alt, (alt != ""), (force_inline_tag != ""))
         }
@@ -399,7 +406,12 @@ function rewrite_double_bang_with_parens(line,    out, rest, token, inside, src,
         src = substr(inside, sep + 2)
         sub(/\)$/, "", src)
 
-        repl = render_embed(src, alt, (alt != ""), 1)
+        repl = render_code_include(src, 1)
+        if (repl != "") {
+            repl = "<pre><code>" repl "</code></pre>"
+        } else {
+            repl = render_embed(src, alt, (alt != ""), 1)
+        }
         out = out pre repl
         rest = post
     }
@@ -416,7 +428,12 @@ function rewrite_double_bang_bare(line,    out, rest, token, src, pre, post, rep
         src = token
         sub(/^!!\[/, "", src)
         sub(/\]$/, "", src)
-        repl = render_embed(src, "", 0, 1)
+        repl = render_code_include(src, 1)
+        if (repl != "") {
+            repl = "<pre><code>" repl "</code></pre>"
+        } else {
+            repl = render_embed(src, "", 0, 1)
+        }
         out = out pre repl
         rest = post
     }
@@ -576,6 +593,75 @@ function restore_plain_markers(line) {
     return line
 }
 
+function break_code_double_bang(line,    out, rest, pstart, pend, code_content, token, pre, post, inside, sep, src, alt, repl) {
+    out = ""
+    rest = line
+    while (1) {
+        pstart = index(rest, "<code>")
+        if (pstart == 0) {
+            out = out rest
+            break
+        }
+        out = out substr(rest, 1, pstart - 1)
+        rest = substr(rest, pstart)
+        pend = index(substr(rest, 7), "</code>")
+        if (pend == 0) {
+            out = out rest
+            break
+        }
+        pend = pend + 6
+        code_content = substr(rest, 7, pend - 7)
+        rest = substr(rest, pend + 7)
+        if (match(code_content, /!!\[[^\]]*\]\([^)]*\)/)) {
+            token = substr(code_content, RSTART, RLENGTH)
+            pre = substr(code_content, 1, RSTART - 1)
+            post = substr(code_content, RSTART + RLENGTH)
+            inside = token
+            sub(/^!!\[/, "", inside)
+            sep = index(inside, "](")
+            alt = substr(inside, 1, sep - 1)
+            src = substr(inside, sep + 2)
+            sub(/\)$/, "", src)
+            repl = render_code_include(src, 1)
+            if (repl != "") {
+                repl = "<pre><code>" repl "</code></pre>"
+            } else {
+                repl = render_embed(src, alt, (alt != ""), 1)
+            }
+            if (repl == "") {
+                out = out "<code>" code_content "</code>"
+            } else {
+                if (pre != "") out = out "<code>" pre "</code>"
+                out = out repl
+                if (post != "") out = out "<code>" post "</code>"
+            }
+        } else if (match(code_content, /!!\[[^\]]+\]/)) {
+            token = substr(code_content, RSTART, RLENGTH)
+            pre = substr(code_content, 1, RSTART - 1)
+            post = substr(code_content, RSTART + RLENGTH)
+            src = token
+            sub(/^!!\[/, "", src)
+            sub(/\]$/, "", src)
+            repl = render_code_include(src, 1)
+            if (repl != "") {
+                repl = "<pre><code>" repl "</code></pre>"
+            } else {
+                repl = render_embed(src, "", 0, 1)
+            }
+            if (repl == "") {
+                out = out "<code>" code_content "</code>"
+            } else {
+                if (pre != "") out = out "<code>" pre "</code>"
+                out = out repl
+                if (post != "") out = out "<code>" post "</code>"
+            }
+        } else {
+            out = out "<code>" code_content "</code>"
+        }
+    }
+    return out
+}
+
 BEGIN {
     input_dir = dirname_of(input_file)
     in_pre_code = 0
@@ -601,6 +687,9 @@ BEGIN {
 
     line = apply_td_vertical_align(line)
     line = restore_plain_markers(line)
+    if (!(in_pre_code || start_pre)) {
+        line = break_code_double_bang(line)
+    }
     print line
 
     if (start_pre && !end_pre) {
