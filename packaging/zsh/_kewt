@@ -1,0 +1,22 @@
+#compdef kewt
+
+_kewt() {
+    local -a args
+    args=(
+        '--help[Show help message]'
+        '(-h)--help[Show help message]'
+        '(-)--new[Create a new site directory]'
+        '(-)--update[Update site.conf and template.html with latest defaults]'
+        '(-)--post[Create a new empty post file in the configured posts_dir]'
+        '(-)--generate-template[Generate a new template file]'
+        '(-v --version)'{-v,--version}'[Show version information]'
+        '--from[Source directory]:directory:_directories'
+        '--to[Output directory]:directory:_directories'
+        '(-w --watch)'{-w,--watch}'[Watch for file changes and rebuild automatically]'
+        '(-s --serve)'{-s,--serve}'[Start a local HTTP server after building]::port:'
+    )
+
+    _arguments -S -C $args '*: :_directories'
+}
+
+_kewt "$@"
