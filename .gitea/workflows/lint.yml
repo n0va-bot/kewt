@@ -3,7 +3,11 @@ name: Lint
 on:
   push:
     branches: [main, master]
+    paths:
+      - '**.sh'
   pull_request:
+    paths:
+      - '**.sh'
 
 jobs:
   shellcheck:
