@@ -1,5 +1,6 @@
 ---
 title = "Templates"
+priority = 8
 ---
 # Templates
 

@@ -1,5 +1,6 @@
 ---
 title = "Installation"
+priority = 0
 ---
 # Installation
 

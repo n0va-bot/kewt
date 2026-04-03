@@ -1,5 +1,6 @@
 ---
 title = "Embeds"
+priority = 5
 ---
 # Embeds
 

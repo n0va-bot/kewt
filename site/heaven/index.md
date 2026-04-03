@@ -1,5 +1,6 @@
 ---
 title = "Heaven"
+priority = 3
 content_warning = "This page may contain CSS"
 ---
 # Heaven

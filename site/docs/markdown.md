@@ -1,5 +1,6 @@
 ---
 title = "Markdown Extensions"
+priority = 7
 ---
 # Markdown Extensions
 

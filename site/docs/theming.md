@@ -1,5 +1,6 @@
 ---
 title = "Theming"
+priority = 6
 ---
 # Theming
 

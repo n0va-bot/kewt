@@ -8,7 +8,7 @@ generate_nav() {
     if [ -n "$posts_dir" ] && [ -d "$1/$posts_dir" ]; then
         find_cmd="$find_cmd && echo \"$1/$posts_dir/index.md\""
     fi
-    eval "$find_cmd" | sort -u | AWK_SRC="$1" AWK_SINGLE_FILE_INDEX="$single_file_index" AWK_FLATTEN="$flatten" AWK_ORDER="$order" AWK_HOME_NAME="$home_name" AWK_SHOW_HOME_IN_NAV="$show_home_in_nav" AWK_DINFO="$dinfo" awk -f "$awk_dir/generate_sidebar.awk"
+    eval "$find_cmd" | sort -u | AWK_SRC="$1" AWK_SINGLE_FILE_INDEX="$single_file_index" AWK_FLATTEN="$flatten" AWK_HOME_NAME="$home_name" AWK_SHOW_HOME_IN_NAV="$show_home_in_nav" AWK_DINFO="$dinfo" awk -f "$awk_dir/generate_sidebar.awk"
 }
 escape_html_text() {
     printf '%s' "$1" | sed \
@@ -34,6 +34,7 @@ parse_frontmatter() {
     fm_description=""
     fm_content_warning=""
     fm_tags=""
+    fm_priority=""
     while IFS='=' read -r _fk _fv; do
         case "$_fk" in
             title) fm_title="$_fv" ;;
@@ -42,6 +43,7 @@ parse_frontmatter() {
             description) fm_description="$_fv" ;;
             content_warning) fm_content_warning="$_fv" ;;
             tags) fm_tags="$_fv" ;;
+            priority) fm_priority="$_fv" ;;
         esac
     done < "$_fm_out"
     rm -f "$_fm_out"

@@ -5,7 +5,6 @@ draft_by_default = false
 dir_indexes = true
 single_file_index = true
 flatten = false
-order = ""
 home_name = "Home"
 show_home_in_nav = true
 nav_links = ""
@@ -67,7 +66,6 @@ footer="made with <a href=\"https://kewt.krzak.org\">kewt</a>"
 dir_indexes="true"
 single_file_index="true"
 flatten="false"
-order=""
 home_name="Home"
 show_home_in_nav="true"
 nav_links=""
@@ -127,7 +125,6 @@ load_config() {
             dir_indexes) dir_indexes="$val" ;;
             single_file_index) single_file_index="$val" ;;
             flatten) flatten="$val" ;;
-            order) order="$val" ;;
             home_name) home_name="$val" ;;
             show_home_in_nav) show_home_in_nav="$val" ;;
             nav_links) nav_links="$val" ;;

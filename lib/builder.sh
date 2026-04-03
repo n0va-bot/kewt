@@ -170,10 +170,17 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
                         label="$p_date $p_time"
                     fi
                 fi
-                if [ "$is_post_entry" = "true" ]; then
-                    sort_key="${p_date} ${p_time}"
+                if [ -n "$fm_priority" ]; then
+                    prio_val="$fm_priority"
                 else
-                    sort_key="$name"
+                    prio_val="0"
+                fi
+                if [ "$is_post_entry" = "true" ]; then
+                    prio_key=$(printf '%05d' "$prio_val")
+                    sort_key="${prio_key} ${p_date} ${p_time}"
+                else
+                    prio_key=$(printf '%05d' "$((99999 - prio_val))")
+                    sort_key="${prio_key} $name"
                 fi
                 echo "${sort_key}|- [$label](${name%.md}.html)|$name|${name%.md}.html" >> "$temp_entries"
             else

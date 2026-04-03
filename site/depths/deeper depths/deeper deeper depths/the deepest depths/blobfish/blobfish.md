@@ -1,3 +1,6 @@
+---
+priority = 0
+---
 # Hello!
 
 ![the greatest drawing of a blobfish in the world](blobfish.bmp)

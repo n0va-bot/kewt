@@ -1,5 +1,6 @@
 ---
 title = "Configuration"
+priority = 2
 ---
 # Configuration
 
@@ -13,7 +14,6 @@ draft_by_default = false
 dir_indexes = true
 single_file_index = true
 flatten = false
-order = ""
 home_name = "Home"
 show_home_in_nav = true
 nav_links = ""
@@ -49,7 +49,6 @@ include_cw_pages_in_search = false
 - `dir_indexes` - generate directory index pages when missing `index.md`
 - `single_file_index` - if a directory has one markdown file and no `index.md`, use that file as `index.html`
 - `flatten` - flatten sidebar directory levels
-- `order` - comma separated file/directory name list to order the sidebar (alphabetical by default)
 - `home_name` - text for the home link in navigation (default: "Home")
 - `show_home_in_nav` - show home link in navigation (default: true)
 - `nav_links` - comma separated extra nav links, as bare URLs or Markdown links like `[Label](https://example.com)`

@@ -1,5 +1,6 @@
 ---
 title = "Quickstart"
+priority = 1
 ---
 # Quickstart
 

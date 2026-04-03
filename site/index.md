@@ -1,3 +1,7 @@
+---
+title = "Home"
+priority = 0
+---
 # _kewt_
 ### Pronounced "cute"
 
@@ -14,7 +18,7 @@ It's meant to be a static site generator, like _[kew](https://github.com/uint23/
 ## Features
 
 - No dependencies
-- Frontmatter support (title, date, draft, description)
+- Frontmatter support (title, date, draft, description, priority)
 - Supports many embed types
 - Automatic css variable replacement for older browsers
 - Automatic inlining and embedding of many filetypes with `\![link]` or `\![alt](link)`

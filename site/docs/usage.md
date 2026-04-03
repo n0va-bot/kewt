@@ -1,5 +1,6 @@
 ---
 title = "Usage"
+priority = 3
 ---
 # Usage
 

@@ -43,8 +43,47 @@ function get_title(path, default_title,   full_path, line, title, in_fm) {
     return default_title
 }
 
+function get_priority(path,   full_path, line, prio, in_fm) {
+    full_path = src "/" path
+    if (path !~ /\.md$/) {
+        full_path = full_path "/index.md"
+    }
 
-function compare_paths(p1, p2,    parts1, parts2, n1, n2, i, name1, name2, lname1, lname2, w1, w2) {
+    prio = ""
+    in_fm = 0
+    while ((getline line < full_path) > 0) {
+        if (line ~ /^---[[:space:]]*$/) {
+            if (in_fm == 0) {
+                in_fm = 1
+                continue
+            } else {
+                break
+            }
+        }
+        if (in_fm) {
+            if (line ~ /^[[:space:]]*priority[[:space:]]*=/) {
+                sub(/^[[:space:]]*priority[[:space:]]*=[[:space:]]*/, "", line)
+                if (line ~ /^".*"$/) {
+                    prio = substr(line, 2, length(line) - 2)
+                } else if (line ~ /^'.*'$/) {
+                    prio = substr(line, 2, length(line) - 2)
+                } else {
+                    prio = line
+                }
+                break
+            }
+        } else {
+            break
+        }
+    }
+    close(full_path)
+
+    if (prio != "" && prio + 0 == prio) return prio + 0
+    return 0
+}
+
+
+function compare_paths(p1, p2,    parts1, parts2, n1, n2, i, k, name1, name2, lname1, lname2, pr1, pr2, dir1, dir2, ent1, ent2) {
     n1 = split(p1, parts1, "/")
     n2 = split(p2, parts2, "/")
     for (i = 1; i <= n1 && i <= n2; i++) {
@@ -58,14 +97,36 @@ function compare_paths(p1, p2,    parts1, parts2, n1, n2, i, name1, name2, lname
         if (lname1 == "index" && i == n1 && lname2 != "index") return -1
         if (lname2 == "index" && i == n2 && lname1 != "index") return 1
 
-        w1 = (lname1 in custom_order ? custom_order[lname1] : 999999)
-        w2 = (lname2 in custom_order ? custom_order[lname2] : 999999)
+        if (lname1 != lname2) {
+            dir1 = ""
+            dir2 = ""
+            for (k = 1; k < i; k++) {
+                dir1 = (dir1 == "" ? parts1[k] : dir1 "/" parts1[k])
+                dir2 = (dir2 == "" ? parts2[k] : dir2 "/" parts2[k])
+            }
 
-        if (w1 < w2) return -1
-        if (w1 > w2) return 1
+            if (i == n1) {
+                pr1 = get_priority(p1)
+            } else {
+                ent1 = (dir1 == "" ? name1 : dir1 "/" name1)
+                pr1 = get_priority(ent1)
+            }
 
-        if (lname1 < lname2) return -1
-        if (lname1 > lname2) return 1
+            if (i == n2) {
+                pr2 = get_priority(p2)
+            } else {
+                ent2 = (dir2 == "" ? name2 : dir2 "/" name2)
+                pr2 = get_priority(ent2)
+            }
+
+            if (pr1 > 0 || pr2 > 0) {
+                if (pr1 < pr2) return -1
+                if (pr1 > pr2) return 1
+            }
+
+            if (lname1 < lname2) return -1
+            if (lname1 > lname2) return 1
+        }
     }
     if (n1 < n2) return -1
     if (n1 > n2) return 1
@@ -76,7 +137,6 @@ BEGIN {
     src = ENVIRON["AWK_SRC"]
     single_file_index = ENVIRON["AWK_SINGLE_FILE_INDEX"]
     flatten = ENVIRON["AWK_FLATTEN"]
-    order = ENVIRON["AWK_ORDER"]
     home_name = ENVIRON["AWK_HOME_NAME"]
     show_home_in_nav = ENVIRON["AWK_SHOW_HOME_IN_NAV"]
     dinfo = ENVIRON["AWK_DINFO"]
@@ -85,16 +145,6 @@ BEGIN {
         if (split(dlines[i], dparts, "|") == 3) {
             d_all[dparts[1]] = dparts[2]
             d_dirs[dparts[1]] = dparts[3]
-        }
-    }
-
-    n_order = split(order, oparts, ",")
-    for (i = 1; i <= n_order; i++) {
-        name = oparts[i]
-        sub(/^[[:space:]]*/, "", name)
-        sub(/[[:space:]]*$/, "", name)
-        if (name != "") {
-            custom_order[tolower(name)] = i
         }
     }
 }
