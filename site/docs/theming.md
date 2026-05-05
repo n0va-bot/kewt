@@ -13,8 +13,10 @@ title = "Theming"
 | Kewt Light | `kewt-light` | Light |
 | Nord | `nord` | Dark |
 | Nord Light | `nord-light` | Light |
-| Monokai | `mono` | Dark |
-| Monokai Light | `mono-light` | Light |
+| Monokai | `monokai` | Dark |
+| Monokai Light | `monokai-light` | Light |
+| Grayscale | `grayscale` | Dark |
+| Grayscale Light | `grayscale-light` | Light |
 | One Dark | `onedark` | Dark |
 | One Light | `onelight` | Light |
 | Rose Pine | `rosepine` | Dark |
