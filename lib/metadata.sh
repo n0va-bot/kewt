@@ -38,11 +38,9 @@ first_heading_from_markdown() {
     grep -m 1 '^# ' "$1" | sed 's/^# *//; s/ *$//'
 }
 
-markdown_title_from_file() {
+markdown_title_from_loaded_file() {
     _title_file="$1"
     _title_default="$2"
-
-    parse_frontmatter "$_title_file"
     markdown_title="$fm_title"
 
     if [ -z "$markdown_title" ]; then
@@ -60,6 +58,13 @@ markdown_title_from_file() {
             markdown_title="$_title_default"
         fi
     fi
+}
+
+markdown_title_from_file() {
+    _title_file="$1"
+    _title_default="$2"
+    parse_frontmatter "$_title_file"
+    markdown_title_from_loaded_file "$_title_file" "$_title_default"
 }
 
 set_post_datetime() {

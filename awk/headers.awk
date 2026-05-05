@@ -13,6 +13,24 @@ function strip_markdown(s) {
     gsub(/-+$/, "", s)
     return s
 }
+function unique_id(raw_id,    candidate) {
+    candidate = raw_id
+    if (candidate == "") candidate = "section"
+    if (!(candidate in seen_ids)) {
+        seen_ids[candidate] = 1
+        return candidate
+    }
+    seen_ids[candidate]++
+    return candidate "-" seen_ids[candidate]
+}
+function print_heading(tag, line,    id) {
+    id = unique_id(strip_markdown(line))
+    if (enable_header_links == "true") {
+        print "<" tag " id=\"" id "\">" line " <a href=\"#" id "\" class=\"header-anchor\" aria-label=\"Link to this section\">#</a></" tag ">"
+    } else {
+        print "<" tag " id=\"" id "\">" line "</" tag ">"
+    }
+}
 function print_header(line) {
     tag = ""
     if (line ~ /^# /) { tag = "h1"; sub(/^# /, "", line) }
@@ -23,12 +41,7 @@ function print_header(line) {
     else if (line ~ /^###### /) { tag = "h6"; sub(/^###### /, "", line) }
 
     if (tag != "") {
-        id = strip_markdown(line)
-        if (enable_header_links == "true") {
-            print "<" tag " id=\"" id "\"><a href=\"#" id "\" class=\"header-anchor\">" line "</a></" tag ">"
-        } else {
-            print "<" tag " id=\"" id "\">" line "</" tag ">"
-        }
+        print_heading(tag, line)
     } else {
         print line
     }
@@ -52,7 +65,7 @@ BEGIN {
 
     if ($0 ~ /^=+$/) {
         if (has_prev && prev != "" && prev !~ /^<[a-z]/) {
-            print "<h1 id=\"" strip_markdown(prev) "\">" prev "</h1>"
+            print_heading("h1", prev)
             has_prev = 0
         } else {
             if (has_prev) print_header(prev)
@@ -61,7 +74,7 @@ BEGIN {
         }
     } else if ($0 ~ /^-+$/) {
         if (has_prev && prev != "" && prev !~ /^<[a-z]/) {
-            print "<h2 id=\"" strip_markdown(prev) "\">" prev "</h2>"
+            print_heading("h2", prev)
             has_prev = 0
         } else {
             if (has_prev) print_header(prev)

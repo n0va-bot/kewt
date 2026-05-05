@@ -15,7 +15,7 @@ sed_inplace() {
     fi
 }
 
-temp_file="${KEWT_TMPDIR:-/tmp}/markdown.$$.md"
+temp_file=$(mktemp "${KEWT_TMPDIR:-/tmp}/markdown.XXXXXX")
 cat "$@" > "$temp_file"
 
 trap 'rm -f "$temp_file" "$temp_file.tmp" "$temp_file.fm"' EXIT INT TERM
@@ -30,7 +30,7 @@ awk -f "$awk_dir/mask_inline_code.awk" "$temp_file" > "$temp_file.tmp" && mv "$t
 awk -f "$awk_dir/mask_plain.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
 
 # Reference links
-refs=$(cat "$@" | awk '/^\[[^\]]+\]:  */')
+refs=$(awk '/^\[[^\]]+\]:  */' "$temp_file")
 IFS='
 '
 for ref in $refs; do
@@ -75,7 +75,7 @@ awk -f "$awk_dir/breaks.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.t
 awk -f "$awk_dir/paragraphs.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
 
 # Inline styles
-awk -f "$awk_dir/emoji.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
+awk -v emoji_file="$awk_dir/emoji.tsv" -f "$awk_dir/emoji.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
 awk -f "$awk_dir/markdown_inline.awk" "$temp_file" > "$temp_file.tmp" && mv "$temp_file.tmp" "$temp_file"
 awk -v input_file="$1" -v site_root="$MARKDOWN_SITE_ROOT" -v fallback_file="$MARKDOWN_FALLBACK_FILE" -v script_dir="$script_dir" -f "$awk_dir/markdown_embed.awk" "$temp_file"
 rm "$temp_file"

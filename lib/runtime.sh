@@ -2,6 +2,30 @@ trim_whitespace() {
     printf '%s' "$1" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//'
 }
 
+encode_url_path() {
+    printf '%s' "$1" | sed \
+        -e 's/%/%25/g' \
+        -e 's/ /%20/g' \
+        -e 's/#/%23/g' \
+        -e 's/?/%3F/g' \
+        -e 's/"/%22/g' \
+        -e "s/'/%27/g"
+}
+
+markdown_file_url() {
+    _rel_path="$1"
+    printf '/%s.html\n' "$(encode_url_path "${_rel_path%.md}")"
+}
+
+directory_index_url() {
+    _rel_dir="$1"
+    if [ -z "$_rel_dir" ] || [ "$_rel_dir" = "." ]; then
+        printf '/index.html\n'
+    else
+        printf '/%s/index.html\n' "$(encode_url_path "$_rel_dir")"
+    fi
+}
+
 append_find_rule() {
     _expr="$1"
     _rule="$2"

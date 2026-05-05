@@ -3,6 +3,15 @@ function title_from_name(name) {
     gsub(/-/, " ", name)
     return name
 }
+function url_encode_path(path) {
+    gsub(/%/, "%25", path)
+    gsub(/ /, "%20", path)
+    gsub(/#/, "%23", path)
+    gsub(/\?/, "%3F", path)
+    gsub(/"/, "%22", path)
+    gsub(/'/, "%27", path)
+    return path
+}
 
 function get_title(path, default_title,   full_path, line, title, in_fm) {
     full_path = src "/" path
@@ -172,7 +181,7 @@ END {
                 continue
             }
 
-            printf "<li><a href=\"/%sindex.html\">%s</a><ul>\n", dir_path, get_title(this_d, title_from_name(parts[i]))
+            printf "<li><a href=\"/%sindex.html\">%s</a><ul>\n", url_encode_path(dir_path), get_title(this_d, title_from_name(parts[i]))
             opened_levels[++depth] = i
         }
 
@@ -183,7 +192,7 @@ END {
         is_single = (single_file_index == "true" && md_count[curr_dir] == 1 && !has_index[curr_dir])
 
         if (parts[n] != "index.md" && !is_single) {
-            path = "/" rel
+            path = url_encode_path("/" rel)
             gsub(/\.md$/, ".html", path)
             printf "<li><a href=\"%s\">%s</a></li>\n", path, get_title(rel, title_from_name(parts[n]))
         }

@@ -117,7 +117,7 @@ render_markdown() {
     else
         rel_path="${file#"$src"}"
         rel_path="${rel_path#/}"
-        current_url="/${rel_path%.md}.html"
+        current_url=$(markdown_file_url "$rel_path")
     fi
 
     content_file="$file"
@@ -158,7 +158,7 @@ render_markdown() {
             "$src/styles.css") style_rel_to_src="styles.css" ;;
             "$src/style.css") style_rel_to_src="style.css" ;;
         esac
-        style_path="/${style_rel_to_src%styles.css}"
+        style_path="/$(encode_url_path "${style_rel_to_src%styles.css}")"
         style_path="${style_path%style.css}styles.css"
     else
         style_path="/styles.css"
@@ -252,13 +252,14 @@ render_markdown() {
 
     final_nav="$nav"
     final_header_brand="$header_brand"
+    final_header_search=""
     if [ "$search_in_header" = "true" ]; then
-        final_header_brand="$header_brand $SEARCH_FORM_HEADER"
+        final_header_search="$SEARCH_FORM_HEADER"
         final_nav="$SEARCH_FORM_NAV
 $nav"
     fi
 
-    ENABLE_HEADER_LINKS="$enable_header_links" CUSTOM_ADMONITIONS="$custom_admonitions" MARKDOWN_SITE_ROOT="$src" MARKDOWN_FALLBACK_FILE="$script_dir/styles/$style.css" sh "$script_dir/markdown.sh" "$content_file" | AWK_LANG="$lang" AWK_CURRENT_URL="$current_url" AWK_TITLE="$page_title" AWK_NAV="$final_nav" AWK_FOOTER="$final_footer" AWK_STYLE_PATH="${style_path}" AWK_HEADER_BRAND="$final_header_brand" AWK_HEAD_EXTRA="$head_extra" AWK_VERSION="$asset_version" AWK_CONTENT_WARNING="$fm_content_warning" awk -f "$awk_dir/render_template.awk" "$local_template"
+    ENABLE_HEADER_LINKS="$enable_header_links" CUSTOM_ADMONITIONS="$custom_admonitions" MARKDOWN_SITE_ROOT="$src" MARKDOWN_FALLBACK_FILE="$script_dir/styles/$style.css" sh "$script_dir/markdown.sh" "$content_file" | AWK_LANG="$lang" AWK_CURRENT_URL="$current_url" AWK_TITLE="$page_title" AWK_NAV="$final_nav" AWK_FOOTER="$final_footer" AWK_STYLE_PATH="${style_path}" AWK_HEADER_BRAND="$final_header_brand" AWK_HEADER_SEARCH="$final_header_search" AWK_HEAD_EXTRA="$head_extra" AWK_VERSION="$asset_version" AWK_CONTENT_WARNING="$fm_content_warning" awk -f "$awk_dir/render_template.awk" "$local_template"
 }
 generate_content_warning_page() {
     _fm_title="$1"

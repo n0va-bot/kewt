@@ -16,6 +16,7 @@ BEGIN {
     style_path = ENVIRON["AWK_STYLE_PATH"]
     head_extra = ENVIRON["AWK_HEAD_EXTRA"]
     header_brand = ENVIRON["AWK_HEADER_BRAND"]
+    header_search = ENVIRON["AWK_HEADER_SEARCH"]
     lang = ENVIRON["AWK_LANG"]
     version = ENVIRON["AWK_VERSION"]
     content_warning = ENVIRON["AWK_CONTENT_WARNING"]
@@ -33,6 +34,7 @@ BEGIN {
     line = replace_all(line, "{{CSS}}", style_path)
     line = replace_all(line, "{{HEAD_EXTRA}}", head_extra)
     line = replace_all(line, "{{HEADER_BRAND}}", header_brand)
+    line = replace_all(line, "{{HEADER_SEARCH}}", header_search)
     line = replace_all(line, "{{VERSION}}", version)
 
     pos = index(line, "{{CONTENT}}")

@@ -68,14 +68,16 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
             if [ "$md_count" -eq 1 ]; then
                 md_file=$(find "$dir" ! -name "$(basename "$dir")" -prune -name "*.md")
                 is_home="false"; [ "$dir" = "$src" ] && is_home="true"
-                target_url="/$rel_dir/index.html"
-                [ "$rel_dir" = "." ] && target_url="/index.html"
+                target_url=$(directory_index_url "$rel_dir")
                 if needs_rebuild "$md_file" "$out_dir/index.html"; then
                     parse_frontmatter "$md_file"
                     if [ -n "$fm_content_warning" ]; then
                         content_out_file="$out_dir/content.html"
-                        content_rel_url="/$rel_dir/content.html"
-                        [ "$rel_dir" = "." ] && content_rel_url="/content.html"
+                        if [ "$rel_dir" = "." ]; then
+                            content_rel_url="/content.html"
+                        else
+                            content_rel_url="/$(encode_url_path "$rel_dir")/content.html"
+                        fi
                         write_content_warning_outputs "$md_file" "$content_out_file" "$content_rel_url" "$target_url" "$out_dir/index.html" "$is_home"
                     else
                         render_markdown "$md_file" "$is_home" "$target_url" > "$out_dir/index.html"
@@ -112,7 +114,8 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
                 template.html|site.conf|style.css|styles.root.css|index.md) continue ;;
             esac
             if [ -d "$entry" ]; then
-                echo "${name}|- [${name}/](${name}/index.html)" >> "$temp_entries"
+                dir_url="$(encode_url_path "$name")/index.html"
+                echo "${name}|- [${name}/](${dir_url})" >> "$temp_entries"
             elif [ "${entry%.md}" != "$entry" ]; then
                 label="${name%.md}"
                 set_post_metadata "$entry" ""
@@ -147,9 +150,11 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
                 else
                     sort_key="$name"
                 fi
-                echo "${sort_key}|- [$label](${name%.md}.html)|$name|${name%.md}.html" >> "$temp_entries"
+                entry_url=$(encode_url_path "${name%.md}.html")
+                echo "${sort_key}|- [$label](${entry_url})|$name|${entry_url}" >> "$temp_entries"
             else
-                echo "${name}|- [$name]($name)|$name|$name" >> "$temp_entries"
+                asset_url=$(encode_url_path "$name")
+                echo "${name}|- [$name]($asset_url)|$name|$asset_url" >> "$temp_entries"
             fi
         done
 
@@ -186,8 +191,7 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
         rm -f "$temp_entries"
 
         is_home="false"; [ "$dir" = "$src" ] && is_home="true"
-        target_url="/$rel_dir/index.html"
-        [ "$rel_dir" = "." ] && target_url="/index.html"
+        target_url=$(directory_index_url "$rel_dir")
 
         num_items=$(wc -l < "$temp_list")
         if [ "$is_posts_dir" = "true" ] && [ -n "$posts_per_page" ] && [ "$posts_per_page" -gt 0 ] && [ "$num_items" -gt "$posts_per_page" ]; then
@@ -289,8 +293,11 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
 
                 if [ -n "$fm_content_warning" ]; then
                     content_out_file="$out_dir/content.html"
-                    content_rel_url="/$rel_dir/content.html"
-                    [ "$rel_dir" = "." ] && content_rel_url="/content.html"
+                    if [ "$rel_dir" = "." ]; then
+                        content_rel_url="/content.html"
+                    else
+                        content_rel_url="/$(encode_url_path "$rel_dir")/content.html"
+                    fi
                     write_content_warning_outputs "$temp_index" "$content_out_file" "$content_rel_url" "$target_url" "$out_dir/index.html" "$is_home"
                 else
                     render_markdown "$temp_index" "$is_home" "$target_url" > "$out_dir/index.html"
@@ -360,8 +367,8 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type f -print" | sort | while 
         if needs_rebuild "$file" "$out_file"; then
             if [ -n "$fm_content_warning" ]; then
                 content_out_file="$out/${rel_path%.md}-content.html"
-                content_rel_url="/${rel_path%.md}-content.html"
-                orig_rel_url="/${rel_path%.md}.html"
+                content_rel_url="/$(encode_url_path "${rel_path%.md}")-content.html"
+                orig_rel_url=$(markdown_file_url "$rel_path")
                 write_content_warning_outputs "$file" "$content_out_file" "$content_rel_url" "$orig_rel_url" "$out_file" "$is_home"
             else
                 render_markdown "$file" "$is_home" > "$out_file"
@@ -446,7 +453,7 @@ if [ "$generate_feed" = "true" ] && [ -n "$base_url" ]; then
 
         rel_path="${post_file#"$src"}"
         rel_path="${rel_path#/}"
-        post_url="$base_url_feed/${rel_path%.md}.html"
+        post_url="$base_url_feed$(markdown_file_url "$rel_path")"
 
         if date -u -d "$post_date $post_time" '+%a, %d %b %Y %H:%M:%S +0000' >/dev/null 2>&1; then
             pub_date=$(date -u -d "$post_date $post_time" '+%a, %d %b %Y %H:%M:%S +0000')
@@ -497,10 +504,10 @@ if [ "$generate_search" = "true" ] || [ "$generate_tags" = "true" ]; then
             if [ "$rel_path" = "index.md" ]; then
                 md_url="/index.html"
             else
-                md_url="/${rel_path%/index.md}/index.html"
+                md_url=$(directory_index_url "${rel_path%/index.md}")
             fi
         else
-            md_url="/${rel_path%.md}.html"
+            md_url=$(markdown_file_url "$rel_path")
             if [ "$single_file_index" = "true" ]; then
                 dir_of_file="$(dirname "$md_file")"
                 rel_dir_of_file="${dir_of_file#"$src"}"
@@ -518,7 +525,7 @@ if [ "$generate_search" = "true" ] || [ "$generate_tags" = "true" ]; then
                         if [ "$rel_dir_of_file" = "." ]; then
                             md_url="/index.html"
                         else
-                            md_url="/$rel_dir_of_file/index.html"
+                            md_url=$(directory_index_url "$rel_dir_of_file")
                         fi
                     fi
                 fi
@@ -528,7 +535,7 @@ if [ "$generate_search" = "true" ] || [ "$generate_tags" = "true" ]; then
         parse_frontmatter "$md_file"
         [ "$fm_draft" = "true" ] && continue
 
-        markdown_title_from_file "$md_file" "$title - Page"
+        markdown_title_from_loaded_file "$md_file" "$title - Page"
         md_heading="$markdown_title"
 
         if [ "$generate_search" = "true" ]; then

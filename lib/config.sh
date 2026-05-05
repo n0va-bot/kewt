@@ -49,6 +49,7 @@ DEFAULT_TMPL='<!doctype html>
         <input type="checkbox" id="nav-toggle" class="nav-toggle" aria-hidden="true" />
         <header>
             <h1>{{HEADER_BRAND}}</h1>
+            {{HEADER_SEARCH}}
             <label for="nav-toggle" class="nav-toggle-label" aria-hidden="true">&#9776;</label>
         </header>
 
