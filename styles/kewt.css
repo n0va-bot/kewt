@@ -37,6 +37,11 @@ body {
 }
 
 header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
     padding: 20px;
     padding-bottom: 0;
     border-bottom: 1px solid var(--code-border);
@@ -45,6 +50,8 @@ header {
 
 header h1 {
     margin: 0;
+    flex: 1 1 auto;
+    min-width: 0;
     font-size: 35px;
     font-weight: bold;
     font-style: italic;
@@ -114,6 +121,12 @@ a {
     margin-left: -10px;
 }
 
+#side-bar a.current-page:hover,
+#side-bar a.current-page:focus {
+    color: var(--fg);
+    background: transparent;
+}
+
 a:hover {
     background: var(--fg);
     color: var(--bg);
@@ -129,6 +142,50 @@ h3 {
     font-size: 25px;
     color: var(--fg-heading);
     font-weight: normal;
+}
+
+.header-link {
+    color: inherit;
+    display: inline;
+}
+
+.header-link:hover,
+.header-link:focus {
+    background: transparent;
+    color: inherit;
+}
+
+.header-anchor {
+    opacity: 0;
+    margin-left: 0.25em;
+    transition: opacity 0.15s ease;
+}
+
+h1:hover > .header-anchor,
+h2:hover > .header-anchor,
+h3:hover > .header-anchor,
+h4:hover > .header-anchor,
+h5:hover > .header-anchor,
+h6:hover > .header-anchor,
+h1:focus-within > .header-anchor,
+h2:focus-within > .header-anchor,
+h3:focus-within > .header-anchor,
+h4:focus-within > .header-anchor,
+h5:focus-within > .header-anchor,
+h6:focus-within > .header-anchor,
+h1:hover .header-link .header-anchor,
+h2:hover .header-link .header-anchor,
+h3:hover .header-link .header-anchor,
+h4:hover .header-link .header-anchor,
+h5:hover .header-link .header-anchor,
+h6:hover .header-link .header-anchor,
+h1:focus-within .header-link .header-anchor,
+h2:focus-within .header-link .header-anchor,
+h3:focus-within .header-link .header-anchor,
+h4:focus-within .header-link .header-anchor,
+h5:focus-within .header-link .header-anchor,
+h6:focus-within .header-link .header-anchor {
+    opacity: 1;
 }
 
 pre {
@@ -455,9 +512,10 @@ tr:nth-child(even) {
 .kewt-search-header {
     display: inline-flex;
     gap: 4px;
-    margin-left: auto;
+    margin-left: 0;
     vertical-align: middle;
     font-style: normal;
+    flex: 0 0 auto;
 }
 
 .kewt-search-header input[type="text"] {

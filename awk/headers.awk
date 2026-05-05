@@ -23,10 +23,17 @@ function unique_id(raw_id,    candidate) {
     seen_ids[candidate]++
     return candidate "-" seen_ids[candidate]
 }
+function has_inline_link(line) {
+    return (index(line, "<a ") > 0 || index(line, "<a\t") > 0)
+}
 function print_heading(tag, line,    id) {
     id = unique_id(strip_markdown(line))
     if (enable_header_links == "true") {
-        print "<" tag " id=\"" id "\">" line " <a href=\"#" id "\" class=\"header-anchor\" aria-label=\"Link to this section\">#</a></" tag ">"
+        if (has_inline_link(line)) {
+            print "<" tag " id=\"" id "\">" line " <a href=\"#" id "\" class=\"header-anchor\" aria-label=\"Link to this section\">#</a></" tag ">"
+        } else {
+            print "<" tag " id=\"" id "\"><a href=\"#" id "\" class=\"header-link\">" line "<span class=\"header-anchor\" aria-hidden=\"true\">#</span></a></" tag ">"
+        }
     } else {
         print "<" tag " id=\"" id "\">" line "</" tag ">"
     }
