@@ -37,6 +37,7 @@ jobs:
 
       - name: Deploy website
         run: |
-          rsync -az --delete \
+          rsync -rlz --delete --omit-dir-times \
+            --exclude '/logs/' \
             -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
             out/ "${{ secrets.REMOTE_HOST }}:/var/www/kewt.krzak.org/"
