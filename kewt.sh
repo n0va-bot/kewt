@@ -5,15 +5,30 @@ die() {
     exit 1
 }
 
+make_temp_dir() {
+    _temp_base="${TMPDIR:-/tmp}/kewt_run.$$"
+    _temp_try=0
+    while [ "$_temp_try" -lt 1000 ]; do
+        _temp_path="${_temp_base}.${_temp_try}"
+        if (umask 077 && mkdir "$_temp_path") 2>/dev/null; then
+            printf '%s\n' "$_temp_path"
+            return 0
+        fi
+        _temp_try=$((_temp_try + 1))
+    done
+    return 1
+}
+
 script_dir=$(CDPATH="" cd -- "$(dirname -- "$0")" && pwd)
 awk_dir="$script_dir/awk"
 
-KEWT_TMPDIR=$(mktemp -d "/tmp/kewt_run.XXXXXX")
+KEWT_TMPDIR=$(make_temp_dir) || die "Could not create temporary directory."
 trap 'rm -rf "$KEWT_TMPDIR"' EXIT
 trap 'exit 0' HUP INT TERM
 
 . "$script_dir/lib/config.sh"
 . "$script_dir/lib/metadata.sh"
+. "$script_dir/lib/manifest.sh"
 . "$script_dir/lib/commands.sh"
 . "$script_dir/lib/generator.sh"
 . "$script_dir/lib/builder.sh"

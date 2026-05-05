@@ -1,3 +1,5 @@
+#!/bin/sh
+
 SEARCH_FORM_FOOTER='<form class="kewt-search-footer" action="/search.html" method="get"><input type="text" name="q" placeholder="Search..." required><button type="submit">Go</button></form>'
 SEARCH_FORM_HEADER='<form class="kewt-search-header" action="/search.html" method="get"><input type="text" name="q" placeholder="Search..." required><button type="submit">Go</button></form>'
 SEARCH_FORM_NAV='<div class="kewt-search-nav"><form action="/search.html" method="get"><input type="text" name="q" placeholder="Search..." required><button type="submit">Go</button></form></div>'

@@ -1,3 +1,5 @@
+#!/bin/sh
+
 DEFAULT_CONF='title = "kewt"
 style = "kewt"
 lang = "en"

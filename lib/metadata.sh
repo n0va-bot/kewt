@@ -1,3 +1,5 @@
+#!/bin/sh
+
 parse_frontmatter() {
     _fm_file="$1"
     _fm_out="$KEWT_TMPDIR/fm_vals.txt"

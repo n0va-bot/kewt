@@ -15,7 +15,8 @@ sed_inplace() {
     fi
 }
 
-temp_file=$(mktemp "${KEWT_TMPDIR:-/tmp}/markdown.XXXXXX")
+temp_parent="${KEWT_TMPDIR:-${TMPDIR:-/tmp}}"
+temp_file="${temp_parent}/markdown.$$.md"
 cat "$@" > "$temp_file"
 
 trap 'rm -f "$temp_file" "$temp_file.tmp" "$temp_file.fm"' EXIT INT TERM

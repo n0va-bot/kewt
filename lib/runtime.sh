@@ -1,3 +1,5 @@
+#!/bin/sh
+
 trim_whitespace() {
     printf '%s' "$1" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//'
 }
@@ -24,6 +26,43 @@ directory_index_url() {
     else
         printf '/%s/index.html\n' "$(encode_url_path "$_rel_dir")"
     fi
+}
+
+format_rfc2822_utc() {
+    _rfc_date="$1"
+    _rfc_time="${2:-00:00}"
+    [ -n "$_rfc_time" ] || _rfc_time="00:00"
+    awk -v d="$_rfc_date" -v t="$_rfc_time" '
+        function weekday(y, m, day,    k, j, h) {
+            if (m < 3) {
+                m += 12
+                y--
+            }
+            k = y % 100
+            j = int(y / 100)
+            h = (day + int((13 * (m + 1)) / 5) + k + int(k / 4) + int(j / 4) + 5 * j) % 7
+            return (h + 6) % 7
+        }
+        BEGIN {
+            split(d, da, "-")
+            split(t, ti, ":")
+            year = da[1] + 0
+            month = da[2] + 0
+            day = da[3] + 0
+            hour = (ti[1] == "" ? 0 : ti[1]) + 0
+            minute = (ti[2] == "" ? 0 : ti[2]) + 0
+
+            months[1] = "Jan"; months[2] = "Feb"; months[3] = "Mar"; months[4] = "Apr"
+            months[5] = "May"; months[6] = "Jun"; months[7] = "Jul"; months[8] = "Aug"
+            months[9] = "Sep"; months[10] = "Oct"; months[11] = "Nov"; months[12] = "Dec"
+
+            days[0] = "Sun"; days[1] = "Mon"; days[2] = "Tue"; days[3] = "Wed"
+            days[4] = "Thu"; days[5] = "Fri"; days[6] = "Sat"
+
+            printf "%s, %02d %s %04d %02d:%02d:00 +0000\n",
+                days[weekday(year, month, day)], day, months[month], year, hour, minute
+        }
+    '
 }
 
 append_find_rule() {
@@ -72,7 +111,7 @@ append_nested_marker_rules() {
 
     find "$_root" -name "$_marker" > "$_tmp_file"
     while IFS= read -r marker_path; do
-        marker_dir="${marker_path%/$marker}"
+        marker_dir="${marker_path%/"$marker"}"
         if [ "$marker_dir" != "$_root" ] && [ "$marker_dir" != "." ]; then
             _expr=$(append_find_rule "$_expr" "-path '$marker_dir'")
             _expr=$(append_find_rule "$_expr" "-path '$marker_dir/*'")
@@ -130,7 +169,7 @@ refresh_build_context() {
 
     asset_version=""
     if [ "$versioning" = "true" ]; then
-        asset_version="?v=$(date +%s)"
+        asset_version="?v=$(date '+%Y%m%d%H%M%S')"
     fi
 
     resolve_template_path

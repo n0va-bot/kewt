@@ -1,3 +1,5 @@
+#!/bin/sh
+
 usage() {
     invoked_as=$(basename "${KEWT_INVOKED_AS:-$0}")
     cat <<EOF

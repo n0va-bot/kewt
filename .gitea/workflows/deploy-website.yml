@@ -1,0 +1,42 @@
+name: Deploy Website
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy-website:
+    runs-on: local
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Ensure deploy tools are available
+        run: |
+          if ! command -v ssh >/dev/null 2>&1 || ! command -v rsync >/dev/null 2>&1 || ! command -v ssh-keyscan >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y openssh-client rsync
+          fi
+
+      - name: Build website
+        run: |
+          sh kewt.sh --from site --to out
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+          REMOTE_HOST_VAL="${{ secrets.REMOTE_HOST }}"
+          REMOTE_ADDR=$(printf '%s\n' "$REMOTE_HOST_VAL" | awk -F@ '{print $NF}')
+
+          ssh-keyscan -H "$REMOTE_ADDR" >> ~/.ssh/known_hosts
+
+      - name: Deploy website
+        run: |
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
+            out/ "${{ secrets.REMOTE_HOST }}:/var/www/kewt.krzak.org/"

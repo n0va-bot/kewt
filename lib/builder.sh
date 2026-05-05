@@ -1,3 +1,5 @@
+#!/bin/sh
+
 needs_rebuild() {
     src_file="$1"
     out_file="$2"
@@ -29,6 +31,8 @@ write_content_warning_outputs() {
 
 build_site() {
 echo "Building site from '$src' to '$out'..."
+
+build_markdown_manifest
 
 eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while read -r dir; do
     rel_dir="${dir#"$src"}"
@@ -64,9 +68,8 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
             is_posts_dir="true"
         fi
         if [ "$single_file_index" = "true" ] && [ "$is_posts_dir" = "false" ] && [ "$has_list" = "false" ]; then
-            md_count=$(find "$dir" ! -name "$(basename "$dir")" -prune -name "*.md" | wc -l)
-            if [ "$md_count" -eq 1 ]; then
-                md_file=$(find "$dir" ! -name "$(basename "$dir")" -prune -name "*.md")
+            if load_manifest_dir_entry "$rel_dir" && [ "$dir_md_count" -eq 1 ]; then
+                md_file="$src/$dir_first_md"
                 is_home="false"; [ "$dir" = "$src" ] && is_home="true"
                 target_url=$(directory_index_url "$rel_dir")
                 if needs_rebuild "$md_file" "$out_dir/index.html"; then
@@ -117,11 +120,12 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
                 dir_url="$(encode_url_path "$name")/index.html"
                 echo "${name}|- [${name}/](${dir_url})" >> "$temp_entries"
             elif [ "${entry%.md}" != "$entry" ]; then
+                entry_rel_path="${entry#"$src"/}"
+                load_manifest_entry "$entry_rel_path" || continue
                 label="${name%.md}"
-                set_post_metadata "$entry" ""
-                [ "$fm_draft" = "true" ] && continue
+                [ "$manifest_draft" = "true" ] && continue
 
-                post_h="$post_heading"
+                post_h="$manifest_title"
 
                 is_post_entry="false"
                 if is_posts_directory_rel "$rel_dir"; then
@@ -130,23 +134,23 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
 
                 if [ -n "$post_h" ]; then
                     if [ "$is_post_entry" = "true" ]; then
-                        if [ -n "$post_time" ]; then
-                            label="$post_h - $post_date $post_time"
+                        if [ -n "$manifest_post_time" ]; then
+                            label="$post_h - $manifest_post_date $manifest_post_time"
                         else
-                            label="$post_h - $post_date"
+                            label="$post_h - $manifest_post_date"
                         fi
                     else
                         label="$post_h"
                     fi
                 elif [ "$is_post_entry" = "true" ]; then
-                    if [ -n "$post_time" ]; then
-                        label="$post_date $post_time"
+                    if [ -n "$manifest_post_time" ]; then
+                        label="$manifest_post_date $manifest_post_time"
                     else
-                        label="$post_date"
+                        label="$manifest_post_date"
                     fi
                 fi
                 if [ "$is_post_entry" = "true" ]; then
-                    sort_key="${post_date} ${post_time}"
+                    sort_key="${manifest_post_date} ${manifest_post_time}"
                 else
                     sort_key="$name"
                 fi
@@ -196,7 +200,8 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
         num_items=$(wc -l < "$temp_list")
         if [ "$is_posts_dir" = "true" ] && [ -n "$posts_per_page" ] && [ "$posts_per_page" -gt 0 ] && [ "$num_items" -gt "$posts_per_page" ]; then
             num_pages=$(( (num_items + posts_per_page - 1) / posts_per_page ))
-            for p in $(seq 1 $num_pages); do
+            p=1
+            while [ "$p" -le "$num_pages" ]; do
                 chunk_list="$KEWT_TMPDIR/chunk.md"
                 start_line=$(( (p - 1) * posts_per_page + 1 ))
                 tail -n +$start_line "$temp_list" | head -n "$posts_per_page" > "$chunk_list"
@@ -255,6 +260,7 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
 
                 render_markdown "$temp_index_p" "$is_home" "$target_url_p" > "$out_file"
                 rm -f "$temp_index_p" "$chunk_list"
+                p=$((p + 1))
             done
         else
             if [ "$has_custom_index" = "true" ]; then
@@ -352,23 +358,21 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type f -print" | sort | while 
     fi
 
     if [ "$single_file_index" = "true" ] && [ "${file%.md}" != "$file" ] && [ "$is_preserved" -eq 0 ] && [ ! -f "$(dirname "$file")/index.md" ] && [ "$is_posts_dir_2" = "false" ]; then
-        md_count=$(find "$(dirname "$file")" ! -name "$(basename "$(dirname "$file")")" -prune -name "*.md" | wc -l)
-        [ "$md_count" -eq 1 ] && continue
+        load_manifest_dir_entry "$dir_rel" && [ "$dir_md_count" -eq 1 ] && continue
     fi
 
     if [ "${file%.md}" != "$file" ] && [ "$is_preserved" -eq 0 ]; then
-        # Skip draft files
-        parse_frontmatter "$file"
-        if [ "$fm_draft" = "true" ]; then
-            continue
-        fi
+        load_manifest_entry "$rel_path" || continue
+        [ "$manifest_draft" = "true" ] && continue
         is_home="false"; [ "$file" = "$src/index.md" ] && is_home="true"
         out_file="$out/${rel_path%.md}.html"
         if needs_rebuild "$file" "$out_file"; then
-            if [ -n "$fm_content_warning" ]; then
+            fm_title="$manifest_title"
+            fm_content_warning="$manifest_content_warning"
+            if [ -n "$manifest_content_warning" ]; then
                 content_out_file="$out/${rel_path%.md}-content.html"
                 content_rel_url="/$(encode_url_path "${rel_path%.md}")-content.html"
-                orig_rel_url=$(markdown_file_url "$rel_path")
+                orig_rel_url="$manifest_url"
                 write_content_warning_outputs "$file" "$content_out_file" "$content_rel_url" "$orig_rel_url" "$out_file" "$is_home"
             else
                 render_markdown "$file" "$is_home" > "$out_file"
@@ -433,44 +437,32 @@ if [ "$generate_feed" = "true" ] && [ -n "$base_url" ]; then
     temp_feed_files="$KEWT_TMPDIR/feed_files_$$.txt"
     : > "$temp_feed_files"
 
-    find "$src" -type f -name '*.md' -path "*${posts_dir:-__no_posts__}*" -print | while IFS= read -r post_file; do
-        post_basename=$(basename "$post_file" .md)
-        parse_frontmatter "$post_file"
-        [ "$fm_draft" = "true" ] && continue
-        set_post_datetime "$fm_date" "$post_basename"
-        echo "${post_date} ${post_time}|${post_file}" >> "$temp_feed_files"
-    done
+    while IFS= read -r manifest_rel_path; do
+        case "$manifest_rel_path" in
+            *"${posts_dir:-__no_posts__}"*) ;;
+            *) continue ;;
+        esac
+        load_manifest_entry "$manifest_rel_path" || continue
+        [ "$manifest_draft" = "true" ] && continue
+        printf '%s %s|%s\n' "$manifest_post_date" "$manifest_post_time" "$manifest_rel_path" >> "$temp_feed_files"
+    done < "$manifest_all_list"
 
-    LC_ALL=C sort -r "$temp_feed_files" | cut -d'|' -f2- | while IFS= read -r post_file; do
-        post_basename=$(basename "$post_file" .md)
-        parse_frontmatter "$post_file"
-        [ "$fm_draft" = "true" ] && continue
-        set_post_metadata "$post_file" "Post"
+    LC_ALL=C sort -r "$temp_feed_files" | cut -d'|' -f2- | while IFS= read -r post_rel_path; do
+        load_manifest_entry "$post_rel_path" || continue
+        [ "$manifest_draft" = "true" ] && continue
+
+        post_date="$manifest_post_date"
+        post_time="$manifest_post_time"
+        post_heading="$manifest_title"
+        post_slug="$manifest_post_slug"
         if [ -z "$post_heading" ] && [ -n "$post_slug" ] && ! echo "$post_slug" | grep -q '^[0-9]\+$'; then
             post_heading=$(echo "$post_slug" | sed 's/-/ /g' | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2)}1')
         fi
         feed_post_title="$post_heading - $post_date $post_time"
 
-        rel_path="${post_file#"$src"}"
-        rel_path="${rel_path#/}"
-        post_url="$base_url_feed$(markdown_file_url "$rel_path")"
+        post_url="$base_url_feed$manifest_url"
 
-        if date -u -d "$post_date $post_time" '+%a, %d %b %Y %H:%M:%S +0000' >/dev/null 2>&1; then
-            pub_date=$(date -u -d "$post_date $post_time" '+%a, %d %b %Y %H:%M:%S +0000')
-        else
-            pub_year=$(echo "$post_date" | cut -d- -f1)
-            pub_month=$(echo "$post_date" | cut -d- -f2)
-            pub_day=$(echo "$post_date" | cut -d- -f3)
-            # zero-padded
-            pub_day=$(printf '%02d' "${pub_day#0}")
-            case "$pub_month" in
-                01) pub_mon="Jan" ;; 02) pub_mon="Feb" ;; 03) pub_mon="Mar" ;;
-                04) pub_mon="Apr" ;; 05) pub_mon="May" ;; 06) pub_mon="Jun" ;;
-                07) pub_mon="Jul" ;; 08) pub_mon="Aug" ;; 09) pub_mon="Sep" ;;
-                10) pub_mon="Oct" ;; 11) pub_mon="Nov" ;; 12) pub_mon="Dec" ;;
-            esac
-            pub_date="Mon, ${pub_day} ${pub_mon} ${pub_year} ${post_time}:00 +0000"
-        fi
+        pub_date=$(format_rfc2822_utc "$post_date" "$post_time")
 
         {
             printf '    <item>\n'
@@ -494,25 +486,25 @@ if [ "$generate_search" = "true" ] || [ "$generate_tags" = "true" ]; then
     temp_tags="$KEWT_TMPDIR/tags_$$.txt"
     : > "$temp_tags"
 
-    eval "find \"$src\" \( $IGNORE_ARGS -o $HIDE_ARGS -o $PRESERVE_ARGS \) -prune -o -name \"*.md\" -print" | sort | while IFS= read -r md_file; do
-        is_index="false"
-        [ "$(basename "$md_file")" = "index.md" ] && is_index="true"
+    while IFS= read -r rel_path; do
+        load_manifest_entry "$rel_path" || continue
 
-        rel_path="${md_file#"$src"}"
-        rel_path="${rel_path#/}"
-        if [ "$is_index" = "true" ]; then
+        if [ "$manifest_is_index" = "true" ]; then
             if [ "$rel_path" = "index.md" ]; then
                 md_url="/index.html"
             else
                 md_url=$(directory_index_url "${rel_path%/index.md}")
             fi
         else
-            md_url=$(markdown_file_url "$rel_path")
+            md_url="$manifest_url"
             if [ "$single_file_index" = "true" ]; then
-                dir_of_file="$(dirname "$md_file")"
-                rel_dir_of_file="${dir_of_file#"$src"}"
-                rel_dir_of_file="${rel_dir_of_file#/}"
+                rel_dir_of_file="$manifest_dir_rel"
                 [ -z "$rel_dir_of_file" ] && rel_dir_of_file="."
+                if [ "$rel_dir_of_file" = "." ]; then
+                    dir_of_file="$src"
+                else
+                    dir_of_file="$src/$rel_dir_of_file"
+                fi
 
                 is_posts_dir_search="false"
                 if [ -n "$posts_dir" ] && { [ "$rel_dir_of_file" = "$posts_dir" ] || [ "./$rel_dir_of_file" = "$posts_dir" ]; }; then
@@ -520,8 +512,7 @@ if [ "$generate_search" = "true" ] || [ "$generate_tags" = "true" ]; then
                 fi
 
                 if [ "$is_posts_dir_search" = "false" ] && [ ! -f "$dir_of_file/index.md" ]; then
-                    md_count_search=$(find "$dir_of_file" ! -name "$(basename "$dir_of_file")" -prune -name "*.md" | wc -l)
-                    if [ "$md_count_search" -eq 1 ]; then
+                    if load_manifest_dir_entry "$rel_dir_of_file" && [ "$dir_md_count" -eq 1 ]; then
                         if [ "$rel_dir_of_file" = "." ]; then
                             md_url="/index.html"
                         else
@@ -532,38 +523,12 @@ if [ "$generate_search" = "true" ] || [ "$generate_tags" = "true" ]; then
             fi
         fi
 
-        parse_frontmatter "$md_file"
-        [ "$fm_draft" = "true" ] && continue
-
-        markdown_title_from_loaded_file "$md_file" "$title - Page"
-        md_heading="$markdown_title"
+        [ "$manifest_draft" = "true" ] && continue
+        md_heading="$manifest_title"
 
         if [ "$generate_search" = "true" ]; then
-            if [ -z "$fm_content_warning" ] || [ "$include_cw_pages_in_search" = "true" ]; then
-                md_content=$(awk '{
-                    if (NR == 1 && $0 == "---") { in_fm = 1; next }
-                    if (in_fm && $0 == "---") { in_fm = 0; next }
-                    if (in_fm) next
-                    if ($0 ~ /^```/) { in_code = !in_code; next }
-                    if (in_code) next
-                    print
-                }' "$md_file" | sed \
-                -e 's/^#\{1,6\} //' \
-                -e 's/\*\*\([^*]*\)\*\*/\1/g' \
-                -e 's/\*\([^*]*\)\*/\1/g' \
-                -e 's/__\([^_]*\)__/\1/g' \
-                -e 's/_\([^_]*\)_/\1/g' \
-                -e 's/`\([^`]*\)`/\1/g' \
-                -e 's/\[\([^]]*\)](\([^)]*\))/\1/g' \
-                -e 's/!\[\([^]]*\)](\([^)]*\))//g' \
-                -e 's/^[[:space:]]*[-*+] //' \
-                -e 's/^[[:space:]]*[0-9]\{1,\}\. //' \
-                -e 's/^>[[:space:]]*//' \
-                -e 's/<[^>]*>//g' \
-                -e '/^[[:space:]]*$/d' \
-                -e 's/|//g' \
-                -e 's/^[[:space:]]*---[[:space:]]*$//' \
-                | tr '\n' ' ' | sed -e 's/  */ /g' -e 's/\\/\\\\/g' -e 's/"/\\"/g' | head -c 500)
+            if [ -z "$manifest_content_warning" ] || [ "$include_cw_pages_in_search" = "true" ]; then
+                md_content="$manifest_search_content"
             if [ "$first_search_item" = "false" ]; then
                 printf ',\n' >> "$out/search.json"
             fi
@@ -572,17 +537,17 @@ if [ "$generate_search" = "true" ] || [ "$generate_tags" = "true" ]; then
             fi
         fi
 
-        if [ "$generate_tags" = "true" ] && [ -n "$fm_tags" ]; then
+        if [ "$generate_tags" = "true" ] && [ -n "$manifest_tags" ]; then
             old_ifs=$IFS
             IFS=','
-            for tag in $fm_tags; do
+            for tag in $manifest_tags; do
                 tag=$(echo "$tag" | sed 's/^[ \t]*//;s/[ \t]*$//')
                 [ -z "$tag" ] && continue
                 printf '%s|%s|%s\n' "$tag" "$md_url" "$md_heading" >> "$temp_tags"
             done
             IFS=$old_ifs
         fi
-    done
+    done < "$manifest_visible_list"
 
     if [ "$generate_search" = "true" ]; then
         printf '\n]\n' >> "$out/search.json"
@@ -614,7 +579,7 @@ if [ "$generate_search" = "true" ] || [ "$generate_tags" = "true" ]; then
         cut -d'|' -f1 "$temp_tags" | sort -u | while IFS= read -r tag; do
             tag_slug=$(echo "$tag" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g')
 
-            echo "- [$tag](/$(echo $tags_dir | sed 's|^\/||; s|\/$||')/$tag_slug.html)" >> "$tags_index_md"
+            echo "- [$tag](/$(echo "$tags_dir" | sed 's|^\/||; s|\/$||')/$tag_slug.html)" >> "$tags_index_md"
 
             tag_page_md="$KEWT_TMPDIR/tag_page_$$.md"
             echo "# Tag: $tag" > "$tag_page_md"
