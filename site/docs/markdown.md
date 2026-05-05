@@ -38,7 +38,7 @@ This renders as `<dl><dt>Term</dt><dd>Definition</dd></dl>`. Multiple definition
 
 ## Emoji Shortcodes
 
-Standard GitHub/MkDocs emoji shortcodes like `:smile:`, `:fire:`, `:rocket:` are automatically replaced with their Unicode emoji equivalents. Shortcodes inside code blocks are left as-is.
+Standard GitHub/MkDocs emoji shortcodes like `:smile:`, `:fire:`, `:rocket:` are automatically replaced with their Unicode emoji equivalents. Shortcodes inside codeblocks are left as-is.
 
 ## Pipe Tables
 

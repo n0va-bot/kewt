@@ -12,6 +12,19 @@ manifest_dir_meta_path() {
     printf '%s/manifest/dir-meta/%s.meta\n' "$KEWT_TMPDIR" "$1"
 }
 
+manifest_dir_hidden_by_draft_index() {
+    _manifest_hidden_dir="${1:-.}"
+    [ -f "$manifest_hidden_dirs_list" ] || return 1
+
+    while :; do
+        awk -v dir="$_manifest_hidden_dir" '$0 == dir { found = 1 } END { exit(found ? 0 : 1) }' "$manifest_hidden_dirs_list" >/dev/null 2>&1 && return 0
+        [ "$_manifest_hidden_dir" = "." ] && return 1
+        _manifest_hidden_parent=$(dirname "$_manifest_hidden_dir")
+        [ "$_manifest_hidden_parent" = "$_manifest_hidden_dir" ] && return 1
+        _manifest_hidden_dir="$_manifest_hidden_parent"
+    done
+}
+
 write_manifest_dir_meta() {
     _dir_meta_rel="$1"
     _dir_meta_count="$2"
@@ -79,12 +92,14 @@ build_markdown_manifest() {
     manifest_dir_meta_root="$manifest_root/dir-meta"
     manifest_all_list="$manifest_root/all.lst"
     manifest_visible_list="$manifest_root/visible.lst"
+    manifest_hidden_dirs_list="$manifest_root/hidden-dirs.lst"
 
     rm -rf "$manifest_root"
     mkdir -p "$manifest_meta_root"
     mkdir -p "$manifest_dir_meta_root"
     : > "$manifest_all_list"
     : > "$manifest_visible_list"
+    : > "$manifest_hidden_dirs_list"
 
     eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -name \"*.md\" -print" | sort | while IFS= read -r manifest_file; do
         manifest_rel_path="${manifest_file#"$src"/}"
@@ -94,6 +109,9 @@ build_markdown_manifest() {
         [ "$manifest_filename" = "index.md" ] && manifest_is_index="true"
 
         parse_frontmatter "$manifest_file"
+        if [ "$manifest_filename" = "index.md" ] && [ "$fm_draft" = "true" ]; then
+            printf '%s\n' "$manifest_dir_rel" >> "$manifest_hidden_dirs_list"
+        fi
         markdown_title_from_loaded_file "$manifest_file" "$title - Page"
         manifest_title="$markdown_title"
         set_post_datetime "$fm_date" "$(basename "$manifest_file" .md)"
@@ -160,7 +178,16 @@ build_markdown_manifest() {
         printf '%s\n' "$manifest_rel_path" >> "$manifest_all_list"
     done
 
+    if [ -s "$manifest_hidden_dirs_list" ]; then
+        LC_ALL=C sort -u "$manifest_hidden_dirs_list" > "$manifest_hidden_dirs_list.sorted"
+        mv "$manifest_hidden_dirs_list.sorted" "$manifest_hidden_dirs_list"
+    fi
+
     eval "find \"$src\" \( $IGNORE_ARGS -o $HIDE_ARGS -o $PRESERVE_ARGS \) -prune -o -name \"*.md\" -print" | sort | while IFS= read -r visible_file; do
-        printf '%s\n' "${visible_file#"$src"/}" >> "$manifest_visible_list"
+        visible_rel_path="${visible_file#"$src"/}"
+        load_manifest_entry "$visible_rel_path" || continue
+        [ "$manifest_draft" = "true" ] && continue
+        manifest_dir_hidden_by_draft_index "$manifest_dir_rel" && continue
+        printf '%s\n' "$visible_rel_path" >> "$manifest_visible_list"
     done
 }

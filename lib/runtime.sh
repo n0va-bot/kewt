@@ -173,7 +173,6 @@ refresh_build_context() {
     fi
 
     resolve_template_path
-    build_full_nav
 }
 
 watch_for_changes() {

@@ -62,7 +62,7 @@ include_cw_pages_in_search = false
 - `favicon` - explicit favicon path (used when `logo_as_favicon` is false or no logo is set)
 - `generate_page_title` - automatically generate title text from the first markdown heading or filename (default: true)
 - `error_page` - filename for the generated 404 error page (default: "not_found.html", empty to disable)
-- `versioning` - append a version query parameter (`?v=timestamp`) to css asset urls to bypass cache (default: false)
+- `versioning` - append a build-time version query parameter (for example `?v=20260505193210`) to css asset urls to bypass cache (default: false)
 - `enable_header_links` - turns markdown section headings into clickable anchor links (default: true)
 - `base_url` - absolute URL of the site, used for sitemap and RSS feed generation
 - `generate_feed` - enable RSS feed generation (requires `base_url`)
@@ -75,7 +75,7 @@ include_cw_pages_in_search = false
 - `tags_dir` - directory name for generated tag pages (default: "tags")
 - `generate_search` - generate a `search.json` index for client-side search
 - `search_in_footer` - include a search box in the page footer (requires `generate_search`)
-- `search_in_header` - include a search box in the page header (requires `generate_search`)
+- `search_in_header` - include a search box in the page header (requires `generate_search` and a template that includes `{{HEADER_SEARCH}}`)
 - `include_cw_pages_in_search` - include content warning pages in the search index (default: false)
 
 ## Dot Files

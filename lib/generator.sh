@@ -6,11 +6,36 @@ SEARCH_FORM_NAV='<div class="kewt-search-nav"><form action="/search.html" method
 
 generate_nav() {
     dinfo=$(eval "find \"$1\" \( $IGNORE_ARGS -o $HIDE_ARGS -o $PRESERVE_ARGS \) -prune -o -print" | sort | AWK_SRC="$1" awk -f "$awk_dir/collect_dir_info.awk")
-    find_cmd="find \"$1\" \( $IGNORE_ARGS -o $HIDE_ARGS -o $PRESERVE_ARGS \) -prune -o -name \"*.md\" -print"
-    if [ -n "$posts_dir" ] && [ -d "$1/$posts_dir" ]; then
-        find_cmd="$find_cmd && echo \"$1/$posts_dir/index.md\""
+    nav_input="$KEWT_TMPDIR/nav_input.lst"
+    : > "$nav_input"
+
+    if [ -f "$manifest_visible_list" ]; then
+        while IFS= read -r nav_rel_path; do
+            printf '%s/%s\n' "$1" "$nav_rel_path" >> "$nav_input"
+        done < "$manifest_visible_list"
+
+        if [ -n "$posts_dir" ] && [ -d "$1/$posts_dir" ] && ! manifest_dir_hidden_by_draft_index "$posts_dir"; then
+            has_posts_nav_entry="false"
+            has_posts_index_entry="false"
+            while IFS= read -r nav_rel_path; do
+                case "$nav_rel_path" in
+                    "$posts_dir"/index.md) has_posts_index_entry="true" ;;
+                    "$posts_dir"/*) has_posts_nav_entry="true" ;;
+                esac
+            done < "$manifest_visible_list"
+            if [ "$has_posts_nav_entry" = "true" ] && [ "$has_posts_index_entry" = "false" ]; then
+                printf '%s/%s/index.md\n' "$1" "$posts_dir" >> "$nav_input"
+            fi
+        fi
+    else
+        find_cmd="find \"$1\" \( $IGNORE_ARGS -o $HIDE_ARGS -o $PRESERVE_ARGS \) -prune -o -name \"*.md\" -print"
+        if [ -n "$posts_dir" ] && [ -d "$1/$posts_dir" ]; then
+            find_cmd="$find_cmd && echo \"$1/$posts_dir/index.md\""
+        fi
+        eval "$find_cmd" | sort -u > "$nav_input"
     fi
-    eval "$find_cmd" | sort -u | AWK_SRC="$1" AWK_SINGLE_FILE_INDEX="$single_file_index" AWK_FLATTEN="$flatten" AWK_ORDER="$order" AWK_HOME_NAME="$home_name" AWK_SHOW_HOME_IN_NAV="$show_home_in_nav" AWK_DINFO="$dinfo" awk -f "$awk_dir/generate_sidebar.awk"
+
+    sort -u "$nav_input" | AWK_SRC="$1" AWK_SINGLE_FILE_INDEX="$single_file_index" AWK_FLATTEN="$flatten" AWK_ORDER="$order" AWK_HOME_NAME="$home_name" AWK_SHOW_HOME_IN_NAV="$show_home_in_nav" AWK_DINFO="$dinfo" awk -f "$awk_dir/generate_sidebar.awk"
 }
 escape_html_text() {
     printf '%s' "$1" | sed \

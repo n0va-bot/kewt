@@ -33,6 +33,7 @@ build_site() {
 echo "Building site from '$src' to '$out'..."
 
 build_markdown_manifest
+build_full_nav
 
 eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while read -r dir; do
     rel_dir="${dir#"$src"}"
@@ -117,6 +118,8 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
                 template.html|site.conf|style.css|styles.root.css|index.md) continue ;;
             esac
             if [ -d "$entry" ]; then
+                entry_rel_dir="${entry#"$src"/}"
+                manifest_dir_hidden_by_draft_index "$entry_rel_dir" && continue
                 dir_url="$(encode_url_path "$name")/index.html"
                 echo "${name}|- [${name}/](${dir_url})" >> "$temp_entries"
             elif [ "${entry%.md}" != "$entry" ]; then

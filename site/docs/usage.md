@@ -22,4 +22,4 @@ kewt --serve [port]
 - `--watch` (`-w`) watches for file changes in the source directory and rebuilds automatically.
 - `--clean` cleans the output directory before building (default behavior).
 - `--no-clean` does not clean the output directory before building. Useful with `--watch` to avoid clearing output on every rebuild.
-- `--serve` (`-s`) starts a local HTTP server (python3 or busybox) in the output directory after building. Use with the port number to specify the port. Composable with `--watch`.
+- `--serve` (`-s`) starts a local HTTP server (python3 or busybox) in the output directory after building. Use with the port number to specify the port. The default port is `8000`. Composable with `--watch`.
