@@ -23,29 +23,6 @@ escape_html_attr() {
         -e 's/</\&lt;/g' \
         -e 's/>/\&gt;/g'
 }
-parse_frontmatter() {
-    _fm_file="$1"
-    _fm_out="$KEWT_TMPDIR/fm_vals.txt"
-    : > "$_fm_out"
-    awk -v fm_out="$_fm_out" -f "$awk_dir/frontmatter.awk" "$_fm_file" > /dev/null
-    fm_title=""
-    fm_date=""
-    fm_draft=""
-    fm_description=""
-    fm_content_warning=""
-    fm_tags=""
-    while IFS='=' read -r _fk _fv; do
-        case "$_fk" in
-            title) fm_title="$_fv" ;;
-            date) fm_date="$_fv" ;;
-            draft) fm_draft="$_fv" ;;
-            description) fm_description="$_fv" ;;
-            content_warning) fm_content_warning="$_fv" ;;
-            tags) fm_tags="$_fv" ;;
-        esac
-    done < "$_fm_out"
-    rm -f "$_fm_out"
-}
 nav_links_html() {
     [ -n "$nav_links" ] || return
 
@@ -233,9 +210,9 @@ render_markdown() {
         if [ "$is_home" = "true" ] && [ -n "$home_name" ]; then
             page_title="$home_name - $title"
         else
-            first_heading=$(grep -m 1 '^# ' "$file" | sed 's/^# *//; s/ *$//')
+            first_heading=$(first_heading_from_markdown "$file")
             if [ -n "$first_heading" ]; then
-                first_heading=$(echo "$first_heading" | sed -e 's/\[//g' -e 's/\]//g' -e 's/!//g' -e 's/\*//g' -e 's/_//g' -e 's/`//g' -e 's/([^)]*)//g' | sed 's/\\//g')
+                first_heading=$(strip_markdown_text "$first_heading")
                 page_title="$first_heading - $title"
             else
                 basename_no_ext=$(basename "$file" .md)

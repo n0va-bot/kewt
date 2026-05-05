@@ -13,9 +13,11 @@ trap 'rm -rf "$KEWT_TMPDIR"' EXIT
 trap 'exit 0' HUP INT TERM
 
 . "$script_dir/lib/config.sh"
+. "$script_dir/lib/metadata.sh"
 . "$script_dir/lib/commands.sh"
 . "$script_dir/lib/generator.sh"
 . "$script_dir/lib/builder.sh"
+. "$script_dir/lib/runtime.sh"
 
 src=""
 out=""
@@ -27,6 +29,7 @@ post_title=""
 positional_count=0
 watch_mode="false"
 serve_mode="false"
+serve_port=""
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -129,9 +132,17 @@ EOFCOMPS
         *)
             positional_count=$((positional_count + 1))
             if [ "$positional_count" -eq 1 ]; then
-                if [ -z "$src" ]; then src="$1"; else die "Source already set (use either positional or --from)."; fi
+                if [ -z "$src" ]; then
+                    src="$1"
+                else
+                    die "Source already set (use either positional or --from)."
+                fi
             elif [ "$positional_count" -eq 2 ]; then
-                if [ -z "$out" ]; then out="$1"; else die "Output already set (use either positional or --to)."; fi
+                if [ -z "$out" ]; then
+                    out="$1"
+                else
+                    die "Output already set (use either positional or --to)."
+                fi
             else
                 die "Too many positional arguments."
             fi
@@ -158,137 +169,24 @@ if [ ! -d "$src" ]; then
     if [ "$src" = "site" ]; then
         usage
         exit 1
-    else
-        die "Source directory '$src' does not exist."
     fi
+    die "Source directory '$src' does not exist."
 fi
 
-IGNORE_ARGS="-name '.kewtignore' -o -path '$src/.*'"
+BASE_IGNORE_ARGS=$(build_rule_args "$src" ".kewtignore" "-name '.kewtignore' -o -path '$src/.*'")
+BASE_HIDE_ARGS=$(build_rule_args "$src" ".kewthide" "-name '.kewtignore' -o -name '.kewthide' -o -name '.kewtpreserve' -o -path '$src/.*'")
+PRESERVE_ARGS=$(build_rule_args "$src" ".kewtpreserve" "-false")
+IGNORE_ARGS="$BASE_IGNORE_ARGS"
+HIDE_ARGS="$BASE_HIDE_ARGS"
 
-if [ -f "$src/.kewtignore" ]; then
-    while IFS= read -r line || [ -n "$line" ]; do
-        case "$line" in
-            ''|'#'*) continue ;;
-        esac
-        pattern=$(echo "$line" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
-        [ -z "$pattern" ] && continue
-
-        pattern_clean="${pattern#/}"
-        pattern_clean="${pattern_clean%/}"
-
-        if echo "$pattern" | grep -q "/"; then
-             IGNORE_ARGS="$IGNORE_ARGS -o -path '$src/$pattern_clean' -o -path '$src/$pattern_clean/*'"
-        else
-             IGNORE_ARGS="$IGNORE_ARGS -o -name '$pattern_clean'"
-        fi
-    done < "$src/.kewtignore"
-fi
-
-find "$src" -name .kewtignore > "$KEWT_TMPDIR/kewt_ignore"
-while read -r ki; do
-    d="${ki%/.kewtignore}"
-    if [ "$d" != "$src" ] && [ "$d" != "." ]; then
-        IGNORE_ARGS="$IGNORE_ARGS -o -path '$d' -o -path '$d/*'"
-    fi
-done < "$KEWT_TMPDIR/kewt_ignore"
-rm -f "$KEWT_TMPDIR/kewt_ignore"
-
-HIDE_ARGS="-name '.kewtignore' -o -name '.kewthide' -o -name '.kewtpreserve' -o -path '$src/.*'"
-
-if [ -f "$src/.kewthide" ]; then
-    while IFS= read -r line || [ -n "$line" ]; do
-        case "$line" in
-            ''|'#'*) continue ;;
-        esac
-        pattern=$(echo "$line" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
-        [ -z "$pattern" ] && continue
-
-        pattern_clean="${pattern#/}"
-        pattern_clean="${pattern_clean%/}"
-
-        if echo "$pattern" | grep -q "/"; then
-             HIDE_ARGS="$HIDE_ARGS -o -path '$src/$pattern_clean' -o -path '$src/$pattern_clean/*'"
-        else
-             HIDE_ARGS="$HIDE_ARGS -o -name '$pattern_clean'"
-        fi
-    done < "$src/.kewthide"
-fi
-
-find "$src" -name .kewthide > "$KEWT_TMPDIR/kewt_hide"
-while read -r kh; do
-    d="${kh%/.kewthide}"
-    if [ "$d" != "$src" ] && [ "$d" != "." ]; then
-        HIDE_ARGS="$HIDE_ARGS -o -path '$d' -o -path '$d/*'"
-    fi
-done < "$KEWT_TMPDIR/kewt_hide"
-rm -f "$KEWT_TMPDIR/kewt_hide"
-
-PRESERVE_ARGS="-false"
-
-if [ -f "$src/.kewtpreserve" ]; then
-    while IFS= read -r line || [ -n "$line" ]; do
-        case "$line" in
-            ''|'#'*) continue ;;
-        esac
-        pattern=$(echo "$line" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
-        [ -z "$pattern" ] && continue
-
-        pattern_clean="${pattern#/}"
-        pattern_clean="${pattern_clean%/}"
-
-        if echo "$pattern" | grep -q "/"; then
-             PRESERVE_ARGS="$PRESERVE_ARGS -o -path '$src/$pattern_clean' -o -path '$src/$pattern_clean/*'"
-        else
-             PRESERVE_ARGS="$PRESERVE_ARGS -o -name '$pattern_clean'"
-        fi
-    done < "$src/.kewtpreserve"
-fi
-
-find "$src" -name .kewtpreserve > "$KEWT_TMPDIR/kewt_preserve"
-while read -r kp; do
-    d="${kp%/.kewtpreserve}"
-    if [ "$d" != "$src" ] && [ "$d" != "." ]; then
-        PRESERVE_ARGS="$PRESERVE_ARGS -o -path '$d' -o -path '$d/*'"
-    fi
-done < "$KEWT_TMPDIR/kewt_preserve"
-rm -f "$KEWT_TMPDIR/kewt_preserve"
-
-load_config "./site.conf"
-load_config "$src/site.conf"
-
-if [ -n "$posts_dir" ]; then
-    HIDE_ARGS="$HIDE_ARGS -o -path '$src/$posts_dir/*'"
-fi
+refresh_build_context
 
 [ "$post_mode" = "true" ] && create_new_post "$src" "$post_title"
-
-asset_version=""
-if [ "$versioning" = "true" ]; then
-    asset_version="?v=$(date +%s)"
-fi
-
-template="$src/template.html"
-[ -f "$template" ] || template="./template.html"
-if [ ! -f "$template" ]; then
-    template="$KEWT_TMPDIR/default_template.html"
-    printf '%s\n' "$DEFAULT_TMPL" > "$template"
-fi
 
 if [ "$clean_mode" = "true" ]; then
     [ -d "$out" ] && rm -rf "$out"
 fi
 mkdir -p "$out"
-
-nav=$(generate_nav "$src")
-extra_links=$(nav_links_html)
-if [ -n "$extra_links" ]; then
-    nav="$nav
-$extra_links"
-fi
-if [ -n "$nav_extra" ]; then
-    nav="$nav
-$nav_extra"
-fi
 
 build_site
 
@@ -315,45 +213,17 @@ if [ "$watch_mode" = "true" ]; then
     touch "$KEWT_TMPDIR/watch_mark"
     while true; do
         sleep 1
-        changed="$(find "$src" -type f -newer "$KEWT_TMPDIR/watch_mark" 2>/dev/null | head -n 1)"
-        [ -z "$changed" ] && [ -f "site.conf" ] && [ "site.conf" -nt "$KEWT_TMPDIR/watch_mark" ] && changed="site.conf"
-        [ -z "$changed" ] && [ -f "$src/site.conf" ] && [ "$src/site.conf" -nt "$KEWT_TMPDIR/watch_mark" ] && changed="$src/site.conf"
-        [ -z "$changed" ] && [ -f "$template" ] && [ "$template" -nt "$KEWT_TMPDIR/watch_mark" ] && changed="$template"
-        [ -z "$changed" ] && [ -d "$script_dir/styles" ] && changed="$(find "$script_dir/styles" -type f -newer "$KEWT_TMPDIR/watch_mark" 2>/dev/null | head -n 1)"
+        changed=$(watch_for_changes "$KEWT_TMPDIR/watch_mark")
 
         if [ -n "$changed" ]; then
             echo ""
             echo "Change detected, rebuilding..."
+
             if [ "$clean_mode" = "true" ]; then
                 find "$out" -mindepth 1 -delete 2>/dev/null
             fi
 
-            load_config "./site.conf"
-            load_config "$src/site.conf"
-
-            asset_version=""
-            if [ "$versioning" = "true" ]; then
-                asset_version="?v=$(date +%s)"
-            fi
-
-            template="$src/template.html"
-            [ -f "$template" ] || template="./template.html"
-            if [ ! -f "$template" ]; then
-                template="$KEWT_TMPDIR/default_template.html"
-                printf '%s\n' "$DEFAULT_TMPL" > "$template"
-            fi
-
-            nav=$(generate_nav "$src")
-            extra_links=$(nav_links_html)
-            if [ -n "$extra_links" ]; then
-                nav="$nav
-$extra_links"
-            fi
-            if [ -n "$nav_extra" ]; then
-                nav="$nav
-$nav_extra"
-            fi
-
+            refresh_build_context
             build_site
             touch "$KEWT_TMPDIR/watch_mark"
         fi

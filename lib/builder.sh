@@ -12,6 +12,21 @@ needs_rebuild() {
     return 1
 }
 
+write_content_warning_outputs() {
+    _source_file="$1"
+    _content_out_file="$2"
+    _content_rel_url="$3"
+    _target_url="$4"
+    _landing_out_file="$5"
+    _is_home="$6"
+
+    is_cw_content_page="true"
+    render_markdown "$_source_file" "$_is_home" "$_target_url" > "$_content_out_file"
+    is_cw_content_page="false"
+
+    generate_content_warning_page "$fm_title" "$fm_content_warning" "$_content_rel_url" "$_target_url" "$_landing_out_file" "false"
+}
+
 build_site() {
 echo "Building site from '$src' to '$out'..."
 
@@ -45,7 +60,7 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
 
     if [ "$has_custom_index" = "false" ] || [ "$has_list" = "true" ]; then
         is_posts_dir="false"
-        if [ -n "$posts_dir" ] && { [ "$rel_dir" = "$posts_dir" ] || [ "./$rel_dir" = "$posts_dir" ]; }; then
+        if is_posts_directory_rel "$rel_dir"; then
             is_posts_dir="true"
         fi
         if [ "$single_file_index" = "true" ] && [ "$is_posts_dir" = "false" ] && [ "$has_list" = "false" ]; then
@@ -61,12 +76,7 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
                         content_out_file="$out_dir/content.html"
                         content_rel_url="/$rel_dir/content.html"
                         [ "$rel_dir" = "." ] && content_rel_url="/content.html"
-
-                        is_cw_content_page="true"
-                        render_markdown "$md_file" "$is_home" "$target_url" > "$content_out_file"
-                        is_cw_content_page="false"
-
-                        generate_content_warning_page "$fm_title" "$fm_content_warning" "$content_rel_url" "$target_url" "$out_dir/index.html" "false"
+                        write_content_warning_outputs "$md_file" "$content_out_file" "$content_rel_url" "$target_url" "$out_dir/index.html" "$is_home"
                     else
                         render_markdown "$md_file" "$is_home" "$target_url" > "$out_dir/index.html"
                     fi
@@ -89,7 +99,7 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
 
         sort_args=""
         # If this is the posts dir reverse
-        if [ "$rel_dir" = "$posts_dir" ] || [ "./$rel_dir" = "$posts_dir" ]; then
+        if is_posts_directory_rel "$rel_dir"; then
             sort_args="-r"
         fi
 
@@ -105,73 +115,35 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
                 echo "${name}|- [${name}/](${name}/index.html)" >> "$temp_entries"
             elif [ "${entry%.md}" != "$entry" ]; then
                 label="${name%.md}"
-
-                # Parse frontmatter for date/title/draft
-                parse_frontmatter "$entry"
+                set_post_metadata "$entry" ""
                 [ "$fm_draft" = "true" ] && continue
 
-                # Try to get first heading
-                post_h="$fm_title"
-                if [ -z "$post_h" ]; then
-                    post_h=$(grep -m 1 '^# ' "$entry" | sed 's/^# *//')
-                    if [ -n "$post_h" ]; then
-                        post_h=$(echo "$post_h" | sed -e 's/\[//g' -e 's/\]//g' -e 's/!//g' -e 's/\*//g' -e 's/_//g' -e 's/`//g' -e 's/([^)]*)//g' | sed 's/\\//g')
-                    fi
-                fi
+                post_h="$post_heading"
 
                 is_post_entry="false"
-                if [ "$rel_dir" = "$posts_dir" ] || [ "./$rel_dir" = "$posts_dir" ]; then
+                if is_posts_directory_rel "$rel_dir"; then
                     is_post_entry="true"
                 fi
 
                 if [ -n "$post_h" ]; then
                     if [ "$is_post_entry" = "true" ]; then
-                        # Use frontmatter date if available, else parse from filename
-                        if [ -n "$fm_date" ]; then
-                            p_date=$(echo "$fm_date" | sed 's/^\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\).*/\1/')
-                            p_time=""
-                            if echo "$fm_date" | grep -q '^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}[ T_-]\?[0-9]\{2\}[:\-][0-9]\{2\}'; then
-                                p_time=$(echo "$fm_date" | sed 's/^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}[ T_-]\?\([0-9]\{2\}[:\-][0-9]\{2\}\).*/\1/' | tr '-' ':')
-                            fi
+                        if [ -n "$post_time" ]; then
+                            label="$post_h - $post_date $post_time"
                         else
-                            p_date=$(echo "${name%.md}" | sed 's/^\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\).*/\1/')
-                            p_time="00:00"
-                            if echo "${name%.md}" | grep -q '^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}-[0-9]\{2\}[:\-][0-9]\{2\}'; then
-                                 p_time=$(echo "${name%.md}" | sed 's/^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}-\([0-9]\{2\}[:\-][0-9]\{2\}\).*/\1/' | tr '-' ':')
-                            fi
-                        fi
-                        if [ -n "$p_time" ]; then
-                            label="$post_h - $p_date $p_time"
-                        else
-                            label="$post_h - $p_date"
+                            label="$post_h - $post_date"
                         fi
                     else
                         label="$post_h"
                     fi
                 elif [ "$is_post_entry" = "true" ]; then
-                    # No heading; use date
-                    if [ -n "$fm_date" ]; then
-                        p_date=$(echo "$fm_date" | sed 's/^\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\).*/\1/')
-                        p_time=""
-                        if echo "$fm_date" | grep -q '^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}[ T_-]\?[0-9]\{2\}[:\-][0-9]\{2\}'; then
-                            p_time=$(echo "$fm_date" | sed 's/^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}[ T_-]\?\([0-9]\{2\}[:\-][0-9]\{2\}\).*/\1/' | tr '-' ':')
-                        fi
-                        if [ -n "$p_time" ]; then
-                            label="$p_date $p_time"
-                        else
-                            label="$p_date"
-                        fi
+                    if [ -n "$post_time" ]; then
+                        label="$post_date $post_time"
                     else
-                        p_date=$(echo "${name%.md}" | sed 's/^\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\).*/\1/')
-                        p_time="00:00"
-                        if echo "${name%.md}" | grep -q '^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}-[0-9]\{2\}[:\-][0-9]\{2\}'; then
-                             p_time=$(echo "${name%.md}" | sed 's/^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}-\([0-9]\{2\}[:\-][0-9]\{2\}\).*/\1/' | tr '-' ':')
-                        fi
-                        label="$p_date $p_time"
+                        label="$post_date"
                     fi
                 fi
                 if [ "$is_post_entry" = "true" ]; then
-                    sort_key="${p_date} ${p_time}"
+                    sort_key="${post_date} ${post_time}"
                 else
                     sort_key="$name"
                 fi
@@ -319,12 +291,7 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type d -print" | sort | while 
                     content_out_file="$out_dir/content.html"
                     content_rel_url="/$rel_dir/content.html"
                     [ "$rel_dir" = "." ] && content_rel_url="/content.html"
-
-                    is_cw_content_page="true"
-                    render_markdown "$temp_index" "$is_home" "$target_url" > "$content_out_file"
-                    is_cw_content_page="false"
-
-                    generate_content_warning_page "$fm_title" "$fm_content_warning" "$content_rel_url" "$target_url" "$out_dir/index.html" "false"
+                    write_content_warning_outputs "$temp_index" "$content_out_file" "$content_rel_url" "$target_url" "$out_dir/index.html" "$is_home"
                 else
                     render_markdown "$temp_index" "$is_home" "$target_url" > "$out_dir/index.html"
                 fi
@@ -373,7 +340,7 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type f -print" | sort | while 
     fi
 
     is_posts_dir_2="false"
-    if [ -n "$posts_dir" ] && { [ "$dir_rel" = "$posts_dir" ] || [ "./$dir_rel" = "$posts_dir" ]; }; then
+    if is_posts_directory_rel "$dir_rel"; then
         is_posts_dir_2="true"
     fi
 
@@ -395,12 +362,7 @@ eval "find \"$src\" \( $IGNORE_ARGS \) -prune -o -type f -print" | sort | while 
                 content_out_file="$out/${rel_path%.md}-content.html"
                 content_rel_url="/${rel_path%.md}-content.html"
                 orig_rel_url="/${rel_path%.md}.html"
-
-                is_cw_content_page="true"
-                render_markdown "$file" "$is_home" "$orig_rel_url" > "$content_out_file"
-                is_cw_content_page="false"
-
-                generate_content_warning_page "$fm_title" "$fm_content_warning" "$content_rel_url" "$orig_rel_url" "$out_file" "false"
+                write_content_warning_outputs "$file" "$content_out_file" "$content_rel_url" "$orig_rel_url" "$out_file" "$is_home"
             else
                 render_markdown "$file" "$is_home" > "$out_file"
             fi
@@ -466,61 +428,20 @@ if [ "$generate_feed" = "true" ] && [ -n "$base_url" ]; then
 
     find "$src" -type f -name '*.md' -path "*${posts_dir:-__no_posts__}*" -print | while IFS= read -r post_file; do
         post_basename=$(basename "$post_file" .md)
-        # Parse frontmatter to get date
         parse_frontmatter "$post_file"
         [ "$fm_draft" = "true" ] && continue
-        if [ -n "$fm_date" ]; then
-            post_date=$(echo "$fm_date" | sed 's/^\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\).*/\1/')
-            post_time="00:00"
-            if echo "$fm_date" | grep -q '^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}[ T_-]\?[0-9]\{2\}[:\-][0-9]\{2\}'; then
-                post_time=$(echo "$fm_date" | sed 's/^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}[ T_-]\?\([0-9]\{2\}[:\-][0-9]\{2\}\).*/\1/' | tr '-' ':')
-            fi
-        else
-            post_date=$(echo "$post_basename" | sed 's/^\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\).*/\1/')
-            post_time="00:00"
-            if echo "$post_basename" | grep -q '^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}-[0-9]\{2\}[:\-][0-9]\{2\}'; then
-                post_time=$(echo "$post_basename" | sed 's/^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}-\([0-9]\{2\}[:\-][0-9]\{2\}\).*/\1/' | tr '-' ':')
-            fi
-        fi
+        set_post_datetime "$fm_date" "$post_basename"
         echo "${post_date} ${post_time}|${post_file}" >> "$temp_feed_files"
     done
 
     LC_ALL=C sort -r "$temp_feed_files" | cut -d'|' -f2- | while IFS= read -r post_file; do
         post_basename=$(basename "$post_file" .md)
-
-        # Parse frontmatter
         parse_frontmatter "$post_file"
         [ "$fm_draft" = "true" ] && continue
-
-        # Use frontmatter date, fallback to filename
-        if [ -n "$fm_date" ]; then
-            post_date=$(echo "$fm_date" | sed 's/^\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\).*/\1/')
-            post_time="00:00"
-            if echo "$fm_date" | grep -q '^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}[ T_-]\?[0-9]\{2\}[:\-][0-9]\{2\}'; then
-                post_time=$(echo "$fm_date" | sed 's/^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}[ T_-]\?\([0-9]\{2\}[:\-][0-9]\{2\}\).*/\1/' | tr '-' ':')
-            fi
-        else
-            post_date=$(echo "$post_basename" | sed 's/^\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\).*/\1/')
-            post_time="00:00"
-            if echo "$post_basename" | grep -q '^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}-[0-9]\{2\}[:\-][0-9]\{2\}'; then
-                post_time=$(echo "$post_basename" | sed 's/^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}-\([0-9]\{2\}[:\-][0-9]\{2\}\).*/\1/' | tr '-' ':')
-            fi
+        set_post_metadata "$post_file" "Post"
+        if [ -z "$post_heading" ] && [ -n "$post_slug" ] && ! echo "$post_slug" | grep -q '^[0-9]\+$'; then
+            post_heading=$(echo "$post_slug" | sed 's/-/ /g' | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2)}1')
         fi
-
-        post_slug=$(echo "$post_basename" | sed -e 's/^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}-[0-9]\{2\}[:\-][0-9]\{2\}//' -e 's/^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}//' -e 's/^[_\-]//')
-
-        post_heading="$fm_title"
-        if [ -z "$post_heading" ]; then
-            post_heading=$(grep -m 1 '^# ' "$post_file" | sed 's/^# *//')
-        fi
-        if [ -z "$post_heading" ]; then
-            if [ -n "$post_slug" ] && ! echo "$post_slug" | grep -q '^[0-9]\+$'; then
-                post_heading=$(echo "$post_slug" | sed 's/-/ /g' | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2)}1')
-            else
-                post_heading="Post"
-            fi
-        fi
-        post_heading=$(echo "$post_heading" | sed -e 's/\[//g' -e 's/\]//g' -e 's/!//g' -e 's/\*//g' -e 's/_//g' -e 's/`//g' -e 's/([^)]*)//g' | sed 's/\\//g')
         feed_post_title="$post_heading - $post_date $post_time"
 
         rel_path="${post_file#"$src"}"
@@ -607,21 +528,8 @@ if [ "$generate_search" = "true" ] || [ "$generate_tags" = "true" ]; then
         parse_frontmatter "$md_file"
         [ "$fm_draft" = "true" ] && continue
 
-        md_heading="$fm_title"
-        if [ -z "$md_heading" ]; then
-            md_heading=$(grep -m 1 '^# ' "$md_file" | sed 's/^# *//; s/ *$//')
-            if [ -n "$md_heading" ]; then
-                md_heading=$(echo "$md_heading" | sed -e 's/\[//g' -e 's/\]//g' -e 's/!//g' -e 's/\*//g' -e 's/_//g' -e 's/`//g' -e 's/([^)]*)//g' | sed 's/\\//g')
-            fi
-        fi
-        if [ -z "$md_heading" ]; then
-            basename_no_ext=$(basename "$md_file" .md)
-            if [ "$basename_no_ext" != "index" ] && [ "$basename_no_ext" != "404_gen" ]; then
-                md_heading=$(echo "$basename_no_ext" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')
-            else
-                md_heading="$title - Page"
-            fi
-        fi
+        markdown_title_from_file "$md_file" "$title - Page"
+        md_heading="$markdown_title"
 
         if [ "$generate_search" = "true" ]; then
             if [ -z "$fm_content_warning" ] || [ "$include_cw_pages_in_search" = "true" ]; then
