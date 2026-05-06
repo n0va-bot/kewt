@@ -145,14 +145,17 @@ h3 {
 }
 
 .header-link {
-    color: inherit;
+    color: var(--fg);
     display: inline;
+    text-decoration: underline;
+    text-decoration-color: var(--fg-muted);
 }
 
 .header-link:hover,
 .header-link:focus {
-    background: transparent;
-    color: inherit;
+    background: var(--fg);
+    color: var(--bg);
+    text-decoration-color: var(--fg);
 }
 
 .header-anchor {

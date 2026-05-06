@@ -75,7 +75,7 @@ jobs:
       - name: Setup Arch Linux environment
         run: |
           sudo apt-get update
-          sudo apt-get install -y pacman-package-manager curl jq || true
+          sudo apt-get install -y openssh-client curl jq
           
       - name: Render PKGBUILD and SRCINFO
         run: |
@@ -95,15 +95,26 @@ jobs:
               -e "s/SHA256SUM_PLACEHOLDER/${CHECKSUM}/g" \
               packaging/AUR/.SRCINFO.template > aur-work/.SRCINFO
 
+      - name: Setup AUR SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.AUR_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H aur.archlinux.org >> ~/.ssh/known_hosts
+
       - name: Publish to AUR
-        uses: KSXGitHub/github-actions-deploy-aur@v3.0.1
-        with:
-          pkgname: kewt-bin
-          pkgbuild: ./aur-work/PKGBUILD
-          commit_username: ${{ github.actor }}
-          commit_email: ${{ github.actor }}@users.noreply.github.com
-          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
-          commit_message: "Update kewt-bin to ${{ github.ref_name }}"
+        run: |
+          rm -rf aur-repo
+          git clone "ssh://aur@aur.archlinux.org/kewt-bin.git" aur-repo
+          cp aur-work/PKGBUILD aur-repo/PKGBUILD
+          cp aur-work/.SRCINFO aur-repo/.SRCINFO
+
+          cd aur-repo
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git add PKGBUILD .SRCINFO
+          git commit -m "Update kewt-bin to ${GITHUB_REF_NAME}" || exit 0
+          GIT_SSH_COMMAND="ssh -i ~/.ssh/id_rsa -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes" git push origin HEAD:master
 
   publish-homebrew:
     runs-on: local
