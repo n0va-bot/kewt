@@ -8,6 +8,7 @@ class Kewt < Formula
 
   def install
     bin.install "kewt"
+    chmod 0755, bin/"kewt"
     generate_completions_from_executable(bin/"kewt", "--dump-zsh-completions", shells: [:zsh])
   end
 

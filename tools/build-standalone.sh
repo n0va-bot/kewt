@@ -17,10 +17,10 @@ tmpdir=$(mktemp -d "/tmp/kewt.XXXXXX")
 trap 'rm -rf "$tmpdir"' EXIT HUP INT TERM
 
 # Extract payload
-sed '1,/^#==PAYLOAD==$/d' "$0" | tar -xz -C "$tmpdir"
+LC_ALL=C sed '1,/^#==PAYLOAD==$/d' "$0" | tar -xz -C "$tmpdir"
 
 # Pass control to the extracted script
-KEWT_INVOKED_AS="$0" "$tmpdir/kewt.sh" "$@"
+KEWT_INVOKED_AS="$0" sh "$tmpdir/kewt.sh" "$@"
 exit $?
 
 #==PAYLOAD==
