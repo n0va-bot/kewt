@@ -22,6 +22,8 @@ Options:
   --post                     Create a new empty post file in the configured posts_dir with current date and time as name
   --generate-template [path] Generate a new template file at <path> (default: template.html)
   --version                  Show version information.
+  --draft, -d                Include draft pages in the build.
+  --dry-run                  Show what would be built without writing any files.
   --from <src>               Source directory (default: site)
   --to <out>                 Output directory (default: out)
   --watch, -w                Watch for file changes and rebuild automatically.

@@ -38,6 +38,14 @@ sudo make install
 brew tap n0va-bot/tap
 brew install kewt
 ```
+
+### Fedora
+
+```sh
+sudo dnf copr enable n0va-bot/kewt
+sudo dnf install kewt
+```
+
 ### bpkg
 
 ```sh

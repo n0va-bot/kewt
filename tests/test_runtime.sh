@@ -69,3 +69,20 @@ test_trim_whitespace_tabs() {
     result=$(trim_whitespace "	world	")
     assert_eq "world" "$result" "trim tabs"
 }
+
+test_is_posts_directory_rel() {
+    . "$project_dir/lib/config.sh"
+    . "$project_dir/lib/runtime.sh"
+
+    posts_dir="posts"
+
+    result=$(is_posts_directory_rel "posts" && echo "true" || echo "false")
+    assert_eq "true" "$result" "posts dir match"
+
+    result=$(is_posts_directory_rel "blog" && echo "true" || echo "false")
+    assert_eq "false" "$result" "posts dir no match"
+
+    posts_dir="./posts"
+    result=$(is_posts_directory_rel "posts" && echo "true" || echo "false")
+    assert_eq "true" "$result" "posts dir with dot prefix config"
+}

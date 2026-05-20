@@ -1,0 +1,41 @@
+Name:           kewt
+Version:        VERSION_PLACEHOLDER
+Release:        1%{?dist}
+Summary:        A minimalist, 100% POSIX, static site generator inspired by werc
+
+License:        ISC
+URL:            https://kewt.krzak.org
+Source0:        https://git.krzak.org/N0VA/kewt/archive/v%{version}.tar.gz
+
+BuildArch:      noarch
+BuildRequires:  make
+Requires:       sh
+Requires:       findutils
+Requires:       grep
+Requires:       sed
+Requires:       gawk
+Recommends:     python3
+Recommends:     bash-completion
+
+%description
+A minimalist, 100% POSIX, static site generator inspired by werc and kew
+
+%prep
+%autosetup
+
+%build
+%make_build
+
+%install
+%make_install PREFIX=%{_prefix} BINDIR=%{_bindir} ZSHCOMPDIR=%{_datadir}/zsh/site-functions BASHCOMPDIR=%{_datadir}/bash-completion/completions
+
+%files
+%license LICENSE
+%doc README.md
+%{_bindir}/kewt
+%{_datadir}/zsh/site-functions/_kewt
+%{_datadir}/bash-completion/completions/kewt
+
+%changelog
+* Mon May 20 2024 n0va <n0va@krzak.org> - VERSION_PLACEHOLDER-1
+- Initial package for Fedora

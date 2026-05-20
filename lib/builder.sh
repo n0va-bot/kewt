@@ -48,8 +48,10 @@ build_dir_entries_list() {
         elif [ "${entry%.md}" != "$entry" ]; then
             entry_rel_path="${entry#"$src"/}"
             load_manifest_entry "$entry_rel_path" || continue
+            if [ "${draft_mode:-false}" != "true" ]; then
+                [ "$manifest_draft" = "true" ] && continue
+            fi
             label="${name%.md}"
-            [ "$manifest_draft" = "true" ] && continue
 
             post_h="$manifest_title"
 
@@ -373,7 +375,9 @@ build_files() {
 
         if [ "${file%.md}" != "$file" ] && [ "$is_preserved" -eq 0 ]; then
             load_manifest_entry "$rel_path" || continue
-            [ "$manifest_draft" = "true" ] && continue
+            if [ "${draft_mode:-false}" != "true" ]; then
+                [ "$manifest_draft" = "true" ] && continue
+            fi
             is_home="false"; [ "$file" = "$src/index.md" ] && is_home="true"
             out_file="$out/${rel_path%.md}.html"
             if needs_rebuild "$file" "$out_file"; then
@@ -476,8 +480,15 @@ build_feed() {
         post_url="$base_url_feed$manifest_url"
         pub_date=$(format_rfc2822_utc "$post_date" "$post_time")
 
-        printf '    <item>\n      <title>%s</title>\n      <link>%s</link>\n      <guid>%s</guid>\n      <pubDate>%s</pubDate>\n    </item>\n' \
-            "$feed_post_title" "$post_url" "$post_url" "$pub_date" >> "$feed_path"
+        if [ "$feed_full_content" = "true" ]; then
+            feed_content_file="$src/$post_rel_path"
+            feed_content_html=$(ENABLE_HEADER_LINKS="false" CUSTOM_ADMONITIONS="" MARKDOWN_SITE_ROOT="$src" MARKDOWN_FALLBACK_FILE="$script_dir/styles/$style.css" sh "$script_dir/markdown.sh" "$feed_content_file" | sed 's/</\&lt;/g; s/>/\&gt;/g')
+            printf '    <item>\n      <title>%s</title>\n      <link>%s</link>\n      <guid>%s</guid>\n      <pubDate>%s</pubDate>\n      <description>%s</description>\n    </item>\n' \
+                "$feed_post_title" "$post_url" "$post_url" "$pub_date" "$feed_content_html" >> "$feed_path"
+        else
+            printf '    <item>\n      <title>%s</title>\n      <link>%s</link>\n      <guid>%s</guid>\n      <pubDate>%s</pubDate>\n    </item>\n' \
+                "$feed_post_title" "$post_url" "$post_url" "$pub_date" >> "$feed_path"
+        fi
     done
 
     printf '  </channel>\n</rss>\n' >> "$feed_path"
@@ -606,12 +617,24 @@ build_tags() {
 }
 
 build_error_page() {
-    [ -n "$error_page" ] && [ ! -f "$out/$error_page" ] || return
+    [ -n "$error_page" ] || return
 
-    temp_404="$KEWT_TMPDIR/404_gen.md"
-    printf '# 404 - Not Found\n\nThe requested page could not be found.\n' > "$temp_404"
-    render_markdown "$temp_404" "false" "/$error_page" > "$out/$error_page"
-    rm -f "$temp_404"
+    error_base="${error_page%.html}"
+    error_md="$src/${error_base}.md"
+
+    if [ -f "$error_md" ]; then
+        if needs_rebuild "$error_md" "$out/$error_page"; then
+            is_home="false"
+            current_url="/$error_page"
+            parse_frontmatter "$error_md"
+            render_markdown "$error_md" "$is_home" "/$error_page" > "$out/$error_page"
+        fi
+    elif [ ! -f "$out/$error_page" ]; then
+        temp_404="$KEWT_TMPDIR/404_gen.md"
+        printf '# 404 - Not Found\n\nThe requested page could not be found.\n' > "$temp_404"
+        render_markdown "$temp_404" "false" "/$error_page" > "$out/$error_page"
+        rm -f "$temp_404"
+    fi
 }
 
 build_site() {

@@ -187,8 +187,10 @@ build_markdown_manifest() {
     eval "find \"$src\" \( $IGNORE_ARGS -o $HIDE_ARGS -o $PRESERVE_ARGS \) -prune -o -name \"*.md\" -print" | sort | while IFS= read -r visible_file; do
         visible_rel_path="${visible_file#"$src"/}"
         load_manifest_entry "$visible_rel_path" || continue
-        [ "$manifest_draft" = "true" ] && continue
-        manifest_dir_hidden_by_draft_index "$manifest_dir_rel" && continue
+        if [ "${draft_mode:-false}" != "true" ]; then
+            [ "$manifest_draft" = "true" ] && continue
+            manifest_dir_hidden_by_draft_index "$manifest_dir_rel" && continue
+        fi
         printf '%s\n' "$visible_rel_path" >> "$manifest_visible_list"
     done
 }

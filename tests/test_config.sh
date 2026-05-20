@@ -104,3 +104,26 @@ test_config_load_missing_file() {
 
     assert_eq "kewt" "$title" "missing file keeps defaults"
 }
+
+test_config_feed_full_content_default() {
+    . "$project_dir/lib/config.sh"
+
+    assert_eq "false" "$feed_full_content" "default feed_full_content"
+}
+
+test_config_feed_full_content_load() {
+    . "$project_dir/lib/config.sh"
+
+    tmpdir="${TMPDIR:-/tmp}/kewt_test.$$"
+    mkdir -p "$tmpdir"
+    cat > "$tmpdir/test.conf" <<EOF
+feed_full_content = true
+EOF
+
+    reset_config
+    load_config "$tmpdir/test.conf"
+
+    assert_eq "true" "$feed_full_content" "load feed_full_content"
+
+    rm -rf "$tmpdir"
+}

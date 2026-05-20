@@ -17,6 +17,8 @@ _kewt() {
         '--to[Output directory]:directory:_directories'
         '(-w --watch)'{-w,--watch}'[Watch for file changes and rebuild automatically]'
         '(-s --serve)'{-s,--serve}'[Start a local HTTP server after building]::port:'
+        '(-d --draft)'{-d,--draft}'[Include draft pages in the build]'
+        '(-)--dry-run[Show what would be built without writing any files]'
     )
 
     _arguments -S -C $args '*: :_directories'

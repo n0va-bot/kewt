@@ -34,7 +34,8 @@ tags_dir = "tags"
 generate_search = false
 search_in_footer = false
 search_in_header = false
-include_cw_pages_in_search = false'
+include_cw_pages_in_search = false
+feed_full_content = false'
 
 DEFAULT_TMPL='<!doctype html>
 <html lang="{{LANG}}">
@@ -129,6 +130,7 @@ _load_conf_line() {
         search_in_footer) search_in_footer="$_lc_val" ;;
         search_in_header) search_in_header="$_lc_val" ;;
         include_cw_pages_in_search) include_cw_pages_in_search="$_lc_val" ;;
+        feed_full_content) feed_full_content="$_lc_val" ;;
     esac
 }
 

@@ -45,6 +45,8 @@ positional_count=0
 watch_mode="false"
 serve_mode="false"
 serve_port=""
+draft_mode="false"
+dry_run_mode="false"
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -89,6 +91,8 @@ _kewt() {
         '--to[Output directory]:directory:_directories'
         '(-w --watch)'{-w,--watch}'[Watch for file changes and rebuild automatically]'
         '(-s --serve)'{-s,--serve}'[Start a local HTTP server after building]::port:'
+        '(-d --draft)'{-d,--draft}'[Include draft pages in the build]'
+        '(-)--dry-run[Show what would be built without writing any files]'
     )
 
     _arguments -S -C $args '*: :_directories'
@@ -140,6 +144,12 @@ EOFCOMPS
                 serve_port="$2"
                 shift
             fi
+            ;;
+        --draft|-d)
+            draft_mode="true"
+            ;;
+        --dry-run)
+            dry_run_mode="true"
             ;;
         --*)
             die "Unknown option: $1"
@@ -201,9 +211,23 @@ refresh_build_context
 if [ "$clean_mode" = "true" ]; then
     [ -d "$out" ] && rm -rf "$out"
 fi
+
+if [ "$dry_run_mode" = "true" ]; then
+    dry_run_out="$KEWT_TMPDIR/dry_run_out"
+    mkdir -p "$dry_run_out"
+    out="$dry_run_out"
+fi
+
 mkdir -p "$out"
 
 build_site
+
+if [ "$dry_run_mode" = "true" ]; then
+    echo ""
+    echo "Dry run complete. Files that would be generated:"
+    find "$dry_run_out" -type f | sed "s|^$dry_run_out/||" | sort
+    exit 0
+fi
 
 if [ "$serve_mode" = "true" ]; then
     port="${serve_port:-8000}"

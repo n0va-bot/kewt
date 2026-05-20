@@ -20,50 +20,79 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: "1.21"
 
       - name: Upload Release Asset
         uses: https://gitea.com/actions/release-action@main
         with:
           files: |-
             kewt
-          api_key: '${{secrets.GITEA_TOKEN}}'
+            packaging/bash/kewt.bash
+          api_key: "${{secrets.GITEA_TOKEN}}"
 
       - name: Push to GitHub Release
         run: |
           TAG="${GITHUB_REF#refs/tags/}"
-          
-          # Fetch release body from Gitea
+
           RELEASE_BODY=$(curl -sL \
             "https://git.krzak.org/api/v1/repos/N0VA/kewt/releases/tags/${TAG}" \
             | jq -r '.body // ""')
-          
-          # Build JSON payload
+
           PAYLOAD=$(jq -n \
             --arg tag "$TAG" \
             --arg name "Release $TAG" \
             --arg body "$RELEASE_BODY" \
             '{tag_name: $tag, name: $name, body: $body, draft: false, prerelease: false}')
-          
-          # Create the release on GitHub
+
           curl -sL -X POST \
             -H "Authorization: token ${{ secrets.GH_RELEASE_TOKEN }}" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/n0va-bot/kewt/releases" \
             -d "$PAYLOAD" || true
-          
-          # Get the release ID
+
           RELEASE_ID=$(curl -sL \
             -H "Authorization: token ${{ secrets.GH_RELEASE_TOKEN }}" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/n0va-bot/kewt/releases/tags/${TAG}" | jq -r '.id')
-          
-          # Upload the asset
+
           curl -sL -X POST \
             -H "Authorization: token ${{ secrets.GH_RELEASE_TOKEN }}" \
             -H "Content-Type: application/octet-stream" \
             "https://uploads.github.com/repos/n0va-bot/kewt/releases/${RELEASE_ID}/assets?name=kewt" \
             --data-binary @kewt
+
+  publish-fedora:
+    runs-on: local
+    needs: build
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update || true
+          sudo apt-get install -y rpm || true
+
+      - name: Build Fedora Assets
+        run: |
+          if command -v rpmbuild >/dev/null; then
+            make srpm
+          else
+            echo "rpmbuild not found, generating spec file only"
+            TAG="${GITHUB_REF#refs/tags/}"
+            VERSION="${TAG#v}"
+            sed -e "s/VERSION_PLACEHOLDER/${VERSION}/g" packaging/fedora/kewt.spec.template > packaging/fedora/kewt.spec
+          fi
+
+      - name: Upload Fedora Assets
+        uses: https://gitea.com/actions/release-action@main
+        with:
+          files: |-
+            kewt-*.src.rpm
+            packaging/fedora/kewt.spec
+          api_key: "${{secrets.GITEA_TOKEN}}"
 
   publish-aur:
     runs-on: local
@@ -76,21 +105,21 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y openssh-client curl jq
-          
+
       - name: Render PKGBUILD and SRCINFO
         run: |
           VERSION=${GITHUB_REF#refs/tags/v}
           VERSION=${VERSION#refs/tags/}
-          
+
           curl -sL -o kewt https://git.krzak.org/N0VA/kewt/releases/download/v${VERSION}/kewt
-          
+
           CHECKSUM=$(sha256sum kewt | awk '{print $1}')
-          
+
           mkdir -p aur-work
           sed -e "s/VERSION_PLACEHOLDER/${VERSION}/g" \
               -e "s/SHA256SUM_PLACEHOLDER/${CHECKSUM}/g" \
               packaging/AUR/PKGBUILD.template > aur-work/PKGBUILD
-          
+
           sed -e "s/VERSION_PLACEHOLDER/${VERSION}/g" \
               -e "s/SHA256SUM_PLACEHOLDER/${CHECKSUM}/g" \
               packaging/AUR/.SRCINFO.template > aur-work/.SRCINFO

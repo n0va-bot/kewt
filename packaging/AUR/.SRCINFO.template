@@ -6,10 +6,13 @@ pkgbase = kewt-bin
 	arch = any
 	license = ISC
 	depends = sh
+	optdepends = bash-completion: bash shell completions
 	provides = kewt
 	conflicts = kewt
 	conflicts = kewt-git
 	source = kewt-bin-VERSION_PLACEHOLDER.sh::https://git.krzak.org/N0VA/kewt/releases/download/vVERSION_PLACEHOLDER/kewt
+	source = kewt-bin-VERSION_PLACEHOLDER.bash::https://git.krzak.org/N0VA/kewt/releases/download/vVERSION_PLACEHOLDER/kewt.bash
 	sha256sums = SHA256SUM_PLACEHOLDER
+	sha256sums = SKIP
 
 pkgname = kewt-bin
