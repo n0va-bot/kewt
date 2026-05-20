@@ -1,4 +1,5 @@
 #!/bin/sh
+# shellcheck disable=SC2086
 
 SEARCH_FORM_FOOTER='<form class="kewt-search-footer" action="/search.html" method="get"><input type="text" name="q" placeholder="Search..." required><button type="submit">Go</button></form>'
 SEARCH_FORM_HEADER='<form class="kewt-search-header" action="/search.html" method="get"><input type="text" name="q" placeholder="Search..." required><button type="submit">Go</button></form>'
@@ -37,12 +38,14 @@ generate_nav() {
 
     sort -u "$nav_input" | AWK_SRC="$1" AWK_SINGLE_FILE_INDEX="$single_file_index" AWK_FLATTEN="$flatten" AWK_ORDER="$order" AWK_HOME_NAME="$home_name" AWK_SHOW_HOME_IN_NAV="$show_home_in_nav" AWK_DINFO="$dinfo" awk -f "$awk_dir/generate_sidebar.awk"
 }
+
 escape_html_text() {
     printf '%s' "$1" | sed \
         -e 's/&/\&amp;/g' \
         -e 's/</\&lt;/g' \
         -e 's/>/\&gt;/g'
 }
+
 escape_html_attr() {
     printf '%s' "$1" | sed \
         -e 's/&/\&amp;/g' \
@@ -50,13 +53,13 @@ escape_html_attr() {
         -e 's/</\&lt;/g' \
         -e 's/>/\&gt;/g'
 }
+
 nav_links_html() {
     [ -n "$nav_links" ] || return
 
     old_ifs=$IFS
     set -f
     IFS=','
-    # shellcheck disable=SC2086
     set -- $nav_links
     IFS=$old_ifs
     set +f
@@ -93,6 +96,7 @@ nav_links_html() {
     done
     printf '</ul>'
 }
+
 find_closest() {
     target="$1"
     start_dir="$2"
@@ -108,11 +112,13 @@ find_closest() {
         echo "$src/$target"
     fi
 }
+
 copy_style_with_resolved_vars() {
     src_style="$1"
     out_style="$2"
     awk -f "$awk_dir/replace_variables.awk" "$src_style" > "$out_style"
 }
+
 merge_root_style() {
     root_file="$1"
     base_css="$2"
@@ -134,51 +140,15 @@ merge_root_style() {
         ' "$base_css"
     } | awk -f "$awk_dir/replace_variables.awk" > "$out_file"
 }
-render_markdown() {
-    file="$1"
-    is_home="$2"
-    url_override="$3"
 
-    if [ -n "$url_override" ]; then
-        current_url="$url_override"
-    else
-        rel_path="${file#"$src"}"
-        rel_path="${rel_path#/}"
-        current_url=$(markdown_file_url "$rel_path")
-    fi
-
-    content_file="$file"
-    if [ -n "$posts_dir" ] && [ "$file" != "$src/$posts_dir/index.md" ]; then
-        rel_dir_of_url=$(dirname "$current_url")
-        rel_dir_of_url="${rel_dir_of_url#/}"
-        if { [ "$rel_dir_of_url" = "$posts_dir" ] || [ "./$rel_dir_of_url" = "$posts_dir" ]; } && [ "$(basename "$current_url")" != "index.html" ]; then
-             temp_post_with_backlink="$KEWT_TMPDIR/post_with_backlink_$$.md"
-             printf "[< Back](index.html)\n\n" > "$temp_post_with_backlink"
-             awk -f "$awk_dir/frontmatter.awk" "$file" >> "$temp_post_with_backlink"
-
-             post_md_name="$(basename "$current_url" .html).md"
-             prevnext_file="$KEWT_TMPDIR/prevnext/$post_md_name"
-             if [ -f "$prevnext_file" ]; then
-                 IFS='|' read -r prev_str next_str < "$prevnext_file"
-
-                 printf "\n\n---\n<div class=\"post-nav\">\n" >> "$temp_post_with_backlink"
-                 if [ -n "$prev_str" ]; then
-                     printf "<span class=\"prev-post\">%s</span>\n" "$prev_str" >> "$temp_post_with_backlink"
-                 fi
-                 if [ -n "$next_str" ]; then
-                     printf "<span class=\"next-post\">%s</span>\n" "$next_str" >> "$temp_post_with_backlink"
-                 fi
-                 printf "</div>\n" >> "$temp_post_with_backlink"
-             fi
-             content_file="$temp_post_with_backlink"
-        fi
-    fi
-
-    local_template=$(find_closest "template.html" "$(dirname "$file")")
+resolve_render_template() {
+    local_template=$(find_closest "template.html" "$(dirname "$1")")
     [ -z "$local_template" ] && local_template="$template"
+}
 
-    closest_style_src=$(find_closest "styles.css" "$(dirname "$file")")
-    [ -z "$closest_style_src" ] && closest_style_src=$(find_closest "style.css" "$(dirname "$file")")
+resolve_render_style_path() {
+    closest_style_src=$(find_closest "styles.css" "$(dirname "$1")")
+    [ -z "$closest_style_src" ] && closest_style_src=$(find_closest "style.css" "$(dirname "$1")")
     if [ -n "$closest_style_src" ]; then
         style_rel_to_src="${closest_style_src#"$src"/}"
         case "$closest_style_src" in
@@ -190,7 +160,9 @@ render_markdown() {
     else
         style_path="/styles.css"
     fi
+}
 
+build_header_brand_html() {
     logo_html=""
     if [ "$display_logo" = "true" ] && [ -n "$logo" ]; then
         logo_html="<img class=\"site-logo\" src=\"$logo\" alt=\"$title\" />"
@@ -210,26 +182,27 @@ render_markdown() {
     else
         header_brand="<a href=\"/index.html\">$title</a>"
     fi
+}
 
+build_favicon_head() {
     favicon_src=""
     if [ "$logo_as_favicon" = "true" ] && [ -n "$logo" ]; then
         favicon_src="$logo"
     elif [ -n "$favicon" ]; then
         favicon_src="$favicon"
     fi
-    head_extra=""
+
     if [ -n "$favicon_src" ]; then
-        if echo "$favicon_src" | grep -q "^http"; then
-            head_extra="<link rel=\"icon\" href=\"$favicon_src\" />"
-        elif echo "$favicon_src" | grep -q "^/"; then
-            head_extra="<link rel=\"icon\" href=\"$favicon_src\" />"
-        else
-            head_extra="<link rel=\"icon\" href=\"/$favicon_src\" />"
-        fi
+        case "$favicon_src" in
+            http*|/*) head_extra="<link rel=\"icon\" href=\"$favicon_src\" />" ;;
+            *) head_extra="<link rel=\"icon\" href=\"/$favicon_src\" />" ;;
+        esac
+    else
+        head_extra=""
     fi
+}
 
-    parse_frontmatter "$file"
-
+build_page_title() {
     page_title="$title"
     if [ -n "$fm_title" ]; then
         page_title="$fm_title - $title"
@@ -250,7 +223,9 @@ render_markdown() {
             fi
         fi
     fi
+}
 
+build_og_tags() {
     head_extra_og="<meta property=\"og:title\" content=\"$(escape_html_attr "$page_title")\" />"
     if [ -n "$fm_description" ]; then
         head_extra_og="$head_extra_og
@@ -266,17 +241,23 @@ render_markdown() {
     else
         head_extra="$head_extra_og"
     fi
+}
 
+build_cw_url_hide() {
     if [ "$is_cw_content_page" = "true" ] && [ "$cw_hide_url" = "true" ]; then
         head_extra="$head_extra
         <script>window.history.replaceState(null, '', '$current_url');</script>"
     fi
+}
 
+build_composed_footer() {
     final_footer="$footer"
     if [ "$search_in_footer" = "true" ]; then
         final_footer="$footer $SEARCH_FORM_FOOTER"
     fi
+}
 
+build_composed_nav() {
     final_nav="$nav"
     final_header_brand="$header_brand"
     final_header_search=""
@@ -285,9 +266,65 @@ render_markdown() {
         final_nav="$SEARCH_FORM_NAV
 $nav"
     fi
+}
+
+prepare_post_content() {
+    content_file="$file"
+    if [ -n "$posts_dir" ] && [ "$file" != "$src/$posts_dir/index.md" ]; then
+        rel_dir_of_url=$(dirname "$current_url")
+        rel_dir_of_url="${rel_dir_of_url#/}"
+        if { [ "$rel_dir_of_url" = "$posts_dir" ] || [ "./$rel_dir_of_url" = "$posts_dir" ]; } && [ "$(basename "$current_url")" != "index.html" ]; then
+            temp_post_with_backlink="$KEWT_TMPDIR/post_with_backlink_$$.md"
+            printf "[< Back](index.html)\n\n" > "$temp_post_with_backlink"
+            awk -f "$awk_dir/frontmatter.awk" "$file" >> "$temp_post_with_backlink"
+
+            post_md_name="$(basename "$current_url" .html).md"
+            prevnext_file="$KEWT_TMPDIR/prevnext/$post_md_name"
+            if [ -f "$prevnext_file" ]; then
+                IFS='|' read -r prev_str next_str < "$prevnext_file"
+
+                printf "\n\n---\n<div class=\"post-nav\">\n" >> "$temp_post_with_backlink"
+                if [ -n "$prev_str" ]; then
+                    printf "<span class=\"prev-post\">%s</span>\n" "$prev_str" >> "$temp_post_with_backlink"
+                fi
+                if [ -n "$next_str" ]; then
+                    printf "<span class=\"next-post\">%s</span>\n" "$next_str" >> "$temp_post_with_backlink"
+                fi
+                printf "</div>\n" >> "$temp_post_with_backlink"
+            fi
+            content_file="$temp_post_with_backlink"
+        fi
+    fi
+}
+
+render_markdown() {
+    file="$1"
+    is_home="$2"
+    url_override="$3"
+
+    if [ -n "$url_override" ]; then
+        current_url="$url_override"
+    else
+        rel_path="${file#"$src"}"
+        rel_path="${rel_path#/}"
+        current_url=$(markdown_file_url "$rel_path")
+    fi
+
+    prepare_post_content
+    resolve_render_template "$file"
+    resolve_render_style_path "$file"
+    build_header_brand_html
+    build_favicon_head
+    parse_frontmatter "$file"
+    build_page_title
+    build_og_tags
+    build_cw_url_hide
+    build_composed_footer
+    build_composed_nav
 
     ENABLE_HEADER_LINKS="$enable_header_links" CUSTOM_ADMONITIONS="$custom_admonitions" MARKDOWN_SITE_ROOT="$src" MARKDOWN_FALLBACK_FILE="$script_dir/styles/$style.css" sh "$script_dir/markdown.sh" "$content_file" | AWK_LANG="$lang" AWK_CURRENT_URL="$current_url" AWK_TITLE="$page_title" AWK_NAV="$final_nav" AWK_FOOTER="$final_footer" AWK_STYLE_PATH="${style_path}" AWK_HEADER_BRAND="$final_header_brand" AWK_HEADER_SEARCH="$final_header_search" AWK_HEAD_EXTRA="$head_extra" AWK_VERSION="$asset_version" AWK_CONTENT_WARNING="$fm_content_warning" awk -f "$awk_dir/render_template.awk" "$local_template"
 }
+
 generate_content_warning_page() {
     _fm_title="$1"
     _fm_content_warning="$2"

@@ -20,4 +20,10 @@ uninstall:
 clean:
 	rm -f kewt
 
-.PHONY: all install uninstall clean
+test:
+	sh tests/test_runner.sh
+
+shellcheck:
+	shellcheck kewt.sh markdown.sh lib/*.sh
+
+.PHONY: all install uninstall clean test shellcheck

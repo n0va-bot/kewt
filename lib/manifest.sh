@@ -1,4 +1,5 @@
 #!/bin/sh
+# shellcheck disable=SC2016,SC2030,SC2031
 
 shell_quote() {
     printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"

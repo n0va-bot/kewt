@@ -1,4 +1,5 @@
 #!/bin/sh
+# shellcheck disable=SC2153
 
 usage() {
     invoked_as=$(basename "${KEWT_INVOKED_AS:-$0}")
@@ -97,11 +98,9 @@ update_site() {
     target_conf="$update_dir/site.conf"
     target_tmpl="$update_dir/template.html"
 
-    # Generate default site.conf
     default_conf="$KEWT_TMPDIR/default_site.conf"
     printf '%s\n' "$DEFAULT_CONF" > "$default_conf"
 
-    # Update site.conf
     if [ ! -f "$target_conf" ]; then
         echo "No site.conf found in '$update_dir'; nothing to update."
     else
@@ -126,7 +125,6 @@ update_site() {
         fi
     fi
 
-    # Update template.html
     if [ -f "$target_tmpl" ]; then
         default_tmpl="$KEWT_TMPDIR/default_template.html"
         printf '%s\n' "$DEFAULT_TMPL" > "$default_tmpl"
